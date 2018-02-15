@@ -1,17 +1,22 @@
 import random
 
-from Endpoint import *
+from Node import *
 from Circuit import *
 
 
-class Client(Endpoint):
+class Client(Node):
 
-    def __init__(self, id, type, delay, pos_guards, pos_middles, pos_exits):
-
+    def __init__(self, id, time, type, bandwidth, continent,
+                 pos_guards, pos_middles, pos_exits, tracked=False):
         # Possible guard, middle and exit relay lists for this user
-        self.pos_guards = pos_guards # Typically only 3 guards possible for a user every 2-3 months
+
+        # Typically only 3 guards possible for a user every 2-3 months
+        self.pos_guards = pos_guards
         self.pos_middles = pos_middles
         self.pos_exits = pos_exits
+
+        # Global time
+        self.time = time
 
         # Possible circuits a user can be using at once
 
@@ -24,7 +29,8 @@ class Client(Endpoint):
         # Can have one active Client - Rendezvous Point circuit for
         # every different hidden service being visited
         self.c_rp_circuit = {}
-        super().__init__(id, type, delay)
+
+        super().__init__(id, type, bandwidth, continent, tracked)
 
     # Selects guard, middle and exit relays for some circuit at random
     # Note: realistic relay selection is weighted by bandwidth
@@ -34,14 +40,24 @@ class Client(Endpoint):
         circuit_exit = self.pos_exits[random.randint(0, len(self.pos_exits) - 1)]
         return circuit_guard, circuit_middle, circuit_exit
 
-    def send_
+    def _establish_general_circuit(self):
+        self.general_circuit = Circuit(self, 'General', self._select_relays_for_circuit())
+
+    def _establish_c_rp_circuit(self, hs_hash):
+
 
     # Emulates packet sending for visiting a specified clearnet website
     def visit_clearnet_site(self, site):
         # Create new general circuit if required
         if not self.general_circuit or not self.general_circuit.is_running:
-            self.general_circuit = Circuit(self, 'General', *self._select_relays_for_circuit())
-        self.general_circuit.send_packet(Packet('{0} GET {1}'.format(self.id, site.id)), site)
+            self._establish_general_circuit()
+        # GET request packet for specified site
+        get_packet = Packet(self.id, self.time,
+                            type='GET {0} {1}'.format(self.id, site.id))
+        self.general_circuit.send_packets(get_packet)
+        self.time += get_packet.lived
 
-    def visit_hidden_service(self, hs):
-        if hs not in
+    def visit_hidden_service(self, hs_hash):
+        if not hs_hash in self.c_rp_circuit or \
+           not self.c_rp_circuit[hs_hash].is_running:
+            self._establish_c_rp_circuit(hs_hash)

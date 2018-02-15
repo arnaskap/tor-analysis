@@ -1,7 +1,5 @@
 from Packet import *
 
-PACKET_DELAY = 2.0
-
 class Endpoint:
 
     def __init__(self, id, type, delay, tracked=False):

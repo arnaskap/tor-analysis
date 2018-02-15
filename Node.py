@@ -1,44 +1,56 @@
 # Network node class providing packet sending/receiving and traffic
 # logging
 
-from Packet import *
+from utils import *
 
-PACKET_DELAY = 2.0
+# Time it takes for node to process received packets (read headers,
+# decrypt layer etc.)
+NODE_PROCESSING_TIME = 0.001
+
 
 class Node:
 
-    def __init__(self, id, type, delay, tracked=False):
+    def __init__(self, id, type, bandwidth, continent, tracked):
+        # ID of the node (equivalent of IP address)
         self.id = id
         self.type = type
-        self.delay = delay
+        # Bandwidth of the node
+        self.bandwidth = bandwidth
+        # Flag that says if the node is tracked by the attacker
         self.tracked = tracked
+        # Continent that node is on, used for latency
+        self.continent = continent
+        # Dictionary that matches node IDs to outwards traffic times
+        # from this node
         self.out_traffic = {}
+        # Dictionary that matches node IDs to inwards traffic times
+        # from this node
         self.in_traffic = {}
 
-    def add_packet(self, packet):
+    # Receive a packet
+    def receive_packet(self, sender, packet):
+        # Add packet processing time at receiver node to packet total
+        # lived time
+        packet.lived += NODE_PROCESSING_TIME
         if self.tracked:
-            u_from = packet.user_id
-            if u_from not in self.in_traffic:
-                self.in_traffic[u_from] = []
+            if sender not in self.in_traffic:
+                self.in_traffic[sender.id] = []
             # Add time of arrival
-            self.in_traffic[u_from].append(packet.creation_time+packet.processing_time)
-        packet.processing_time += self.delay
+            self.in_traffic[sender].append(packet.creation_time+packet.lived)
 
-    def get_all_traffic(self):
-        all_traffic = []
-        for u in self.traffic:
-            all_traffic.extend(self.traffic[u])
-        return all_traffic
-
-    def receive_packet(self, packet, make_response, sender=None):
-        self.add_packet(packet)
-        if make_response:
-            resp_packet = Packet('g'+self.id, PACKET_DELAY)
-            return self.send_packet(sender, resp_packet, is_response=True)
-        return None
-
-    def send_packet(self, destination, packet, make_response=False, is_response=False):
-        if destination not in self.out_traffic:
-            self.out_traffic[destination] = {}
-        self.out_traffic[destination].append(packet.creation_time+packet.processing_time)
-        return destination.receive_packet(packet, make_response, is_response)
+    # Send a stream of packets directly to a destination
+    def send_packets(self, destination, packets):
+        latency = LATENCY[self.continent][destination.continent]
+        # The further a packet is in the stream, the more time it
+        # takes to start sending it
+        size_sent = 0
+        if self.tracked:
+            if destination not in self.out_traffic:
+                self.out_traffic[destination.id] = []
+        for packet in packets:
+            if self.tracked:
+                # Add time of arrival
+                self.out_traffic[destination].append(packet.creation_time+packet.lived)
+            packet.lived += latency + (packet.size + size_sent) / self.bandwidth
+            size_sent += packet.size
+            destination.receive_packet(self, packet)
