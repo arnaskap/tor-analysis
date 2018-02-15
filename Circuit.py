@@ -12,9 +12,6 @@ C_RP_LIFETIME = 600
 # General circuit
 GENERAL_LIFETIME = 600
 
-# Placeholder time taken for packet to be sent
-PACKET_DELAY = 2.0
-
 
 class Circuit:
 
@@ -43,24 +40,19 @@ class Circuit:
 
         self._establish_circuit()
 
-    # Send a packet from the start point through the circuit to specified endpoint
+    # Send a stream of packets from the start point through the circuit to a
+    # specified endpoint
     def send_packets(self, packets, endpoint):
         if self.is_running:
             for i in range(0, len(self.circuit)-1):
                 self.circuit[i].send_packets(self.circuit[i+1], packets)
             self.circuit[len(self.circuit)-1].send_packets(endpoint, packets, circuit=self.circuit)
             self.lived += packets[len(packets)-1].processing_time
-            # self.startpoint.send_packet(self.guard, packet)
-            # self.guard.send_packet(self.middle, packet)
-            # self.middle.send_packet(self.exit, packet)
-            # resp_packet = self.exit.send_packet(endpoint, packet, make_response=True, to_endpoint=True)
-            # self.exit.send_packet(self.middle, resp_packet)
-            # self.middle.send_packet(self.guard, resp_packet)
-            # self.guard.send_packet(self.startpoint, resp_packet, to_endpoint=True)
-            # self.lived += packet.processing_time + resp_packet.processing_time
             if self.lived >= self.lifetime:
                 self._close_circuit()
 
+    # Send a stream of packets as a response from the endpoint through the
+    # circuit to the startpoint
     def send_response_packets(self, packets, endpoint):
         if self.is_running:
             endpoint.send_packets(self.circuit[len(self.circuit)-1], packets)
@@ -72,6 +64,8 @@ class Circuit:
 
     # Initialize circuit by sending init packets to circuit relays
     def _establish_circuit(self):
+        # For every relay, an initialisation packet must be sent through the
+        # partly initialised circuit and back to the startpoint
         for i in range(1, len(self.circuit)):
             init_packet = Packet(self.startpoint.id, self.started_at+self.lived,
                                  type='INIT_{0}_relay'.format(str(i)))
@@ -83,25 +77,6 @@ class Circuit:
             for j in range(i, 0, -1):
                 self.circuit[j].send_packet(init_confirmed_packet, self.circuit[j-1])
             self.lived += init_confirmed_packet.processing_time
-
-        # init_guard_packet = Packet('INIT_GUARD', PACKET_DELAY)
-        # guard_initialised = self.startpoint.send_packet(init_guard_packet, self.guard, response=True)
-        # self.guard.send_packet(guard_initialised, self.startpoint)
-        #
-        # init_middle_packet = Packet('INIT_MIDDLE', PACKET_DELAY)
-        # self.startpoint.send_packet(init_middle_packet, self.guard)
-        # middle_initialised = self.guard.send_packet(init_middle_packet, self.middle, response=True)
-        # self.middle.send_packet(middle_initialised, self.guard)
-        # self.guard.send_packet(middle_initialised, self.startpoint)
-        #
-        # init_exit_packet = Packet('INIT_EXIT', PACKET_DELAY)
-        # self.startpoint.send_packet(init_exit_packet, self.guard)
-        # self.guard.send_packet(init_exit_packet, self.middle)
-        # exit_initialised = self.middle.send_packet(init_exit_packet, self.exit, response=True)
-        # self.exit.send_packet(exit_initialised, self.middle)
-        # self.middle.send_packet(exit_initialised, self.guard)
-        # self.guard.send_packet(exit_initialised, self.startpoint)
-
         self.is_running = True
 
     # Close the circuit
