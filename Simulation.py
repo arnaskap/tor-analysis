@@ -33,6 +33,8 @@ def generate_relays(guard_num, middle_num, exit_num, delay):
             exits.append(Relay(i,'exit', delay))
     return guards, middles, exits
 
+def create_hidden_service(relays, html_size):
+
 
 def generate_circuits(users_num, guards, middles, exits):
     circuits = {}
@@ -59,6 +61,8 @@ def generate_relay_traffic(circuits, owned_guards, owned_exits, avg_packets_sent
         if circuits[u][0] not in owned_guards and circuits[u][2] not in owned_exits:
             continue
         generate_user_packets(circuits[u], u, avg_packets_sent, circuit_seconds)
+
+def connec
 
 
 # lots of assumptions here
@@ -122,7 +126,7 @@ if __name__ == '__main__':
                     true_count += 1
                     traffic_map[guard_time] = True
             print(true_count, len(traffic_map))
-            if true_count == len(user_traffic):
+            if true_count >= len(user_traffic)/1.5:
                 predicted_exit = exit
                 break
         if predicted_exit is not None:
