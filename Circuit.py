@@ -61,7 +61,7 @@ class Circuit:
         if self.is_running:
             for i in range(0, len(self.circuit)-1):
                 self.circuit[i].send_packets(self.circuit[i+1], packets)
-            self.circuit[len(self.circuit)-1].send_packets(endpoint, packets, circuit=self.circuit)
+            self.circuit[len(self.circuit)-1].send_packets(endpoint, packets, to_endpoint=True, circuit=self.circuit)
             self.lived += packets[len(packets)-1].lived
             if self.lived >= self.lifetime:
                 self._close_circuit()
@@ -84,12 +84,12 @@ class Circuit:
         # startpoint
         for i in range(1, len(self.circuit)):
             init_packet = Packet(self.startpoint.id, self.started_at+self.lived,
-                                 type='INIT_{0}_relay'.format(str(i)))
+                                 content='INIT_{0}_relay'.format(str(i)))
             for j in range(i):
                 self.circuit[j].send_packet(init_packet, self.circuit[j+1])
             self.lived += init_packet.lived
             init_confirmed_packet = Packet(self.circuit[i].id, self.started_at+self.lived,
-                                           type='INITED_{0}_relay'.format(str(i)))
+                                           content='INITED_{0}_relay'.format(str(i)))
             for j in range(i, 0, -1):
                 self.circuit[j].send_packet(init_confirmed_packet, self.circuit[j-1])
             self.lived += init_confirmed_packet.lived

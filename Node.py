@@ -1,5 +1,5 @@
-# Network node class providing packet sending/receiving and traffic
-# logging
+# Superclass representing network nodes that provides packet
+# sending/receiving and traffic logging
 
 from utils import *
 
@@ -28,7 +28,7 @@ class Node:
         self.in_traffic = {}
 
     # Receive a packet
-    def receive_packet(self, sender, packet):
+    def receive_packet(self, sender, packet, circuit=None, as_endpoint=False):
         # Add packet processing time at receiver node to packet total
         # lived time
         packet.lived += NODE_PROCESSING_TIME
@@ -37,10 +37,19 @@ class Node:
                 self.in_traffic[sender.id] = []
             # Add time of arrival
             self.in_traffic[sender].append(packet.creation_time+packet.lived)
+        # Packet content analysis to be performed if endpoint
+        # receives the packet
+        if as_endpoint:
+            self._process_packet(sender, packet, circuit=circuit)
+
+    # Class to be overridden by children for endpoint packet
+    # processing
+    def _process_packet(self, sender, packet, circuit=None):
+        pass
 
     # Send a stream of packets directly to a destination
-    def send_packets(self, destination, packets):
-        latency = LATENCY[self.continent][destination.continent]
+    def send_packets(self, destination, packets, to_endpoint=False):
+        latency = get_latency(self.continent, destination.continent)
         # The further a packet is in the stream, the more time it
         # takes to start sending it
         size_sent = 0
@@ -53,4 +62,4 @@ class Node:
                 self.out_traffic[destination].append(packet.creation_time+packet.lived)
             packet.lived += latency + (packet.size + size_sent) / self.bandwidth
             size_sent += packet.size
-            destination.receive_packet(self, packet)
+            destination.receive_packet(self, packet, to_endpoint)

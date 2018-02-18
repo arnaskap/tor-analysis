@@ -1,23 +1,13 @@
-import random
+# Client class that simulates end-users of the Tor browser
+# connecting to clearnet websites and hidden services
 
-from Node import *
-from Circuit import *
+from CircuitUser import *
 
 
-class Client(Node):
+class Client(CircuitUser):
 
     def __init__(self, id, time, type, bandwidth, continent,
                  pos_guards, pos_middles, pos_exits, tracked=False):
-        # Possible guard, middle and exit relay lists for this user
-
-        # Typically only 3 guards possible for a user every 2-3 months
-        self.pos_guards = pos_guards
-        self.pos_middles = pos_middles
-        self.pos_exits = pos_exits
-
-        # Global time
-        self.time = time
-
         # Possible circuits a user can be using at once
 
         # Can have one active general circuit for visiting clearnet
@@ -30,21 +20,14 @@ class Client(Node):
         # every different hidden service being visited
         self.c_rp_circuit = {}
 
-        super().__init__(id, type, bandwidth, continent, tracked)
-
-    # Selects guard, middle and exit relays for some circuit at random
-    # Note: realistic relay selection is weighted by bandwidth
-    def _select_relays_for_circuit(self):
-        circuit_guard = self.pos_guards[random.randint(0, len(self.pos_guards) - 1)]
-        circuit_middle = self.pos_middles[random.randint(0, len(self.pos_middles) - 1)]
-        circuit_exit = self.pos_exits[random.randint(0, len(self.pos_exits) - 1)]
-        return circuit_guard, circuit_middle, circuit_exit
+        super().__init__(id, time, type, bandwidth, continent, pos_guards,
+                         pos_middles, pos_exits, tracked)
 
     def _establish_general_circuit(self):
-        self.general_circuit = Circuit(self, 'General', self._select_relays_for_circuit())
+        self.general_circuit = self._get_new_circuit(type='General')
 
     def _establish_c_rp_circuit(self, hs_hash):
-
+        self._visit_hs_ip(hs_hash)
 
     # Emulates packet sending for visiting a specified clearnet website
     def visit_clearnet_site(self, site):

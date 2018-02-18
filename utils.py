@@ -26,3 +26,8 @@ LATENCY = {
     ('South America', 'North America'): 0.14,
     ('South America', 'South America'): 0.01,
 }
+
+
+# Return latency between locations
+def get_latency(c1, c2):
+    return LATENCY[(c1, c2)]
