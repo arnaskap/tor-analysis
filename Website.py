@@ -8,12 +8,11 @@ from Packet import *
 
 class Website(Node):
 
-    def __init__(self, id, type, bandwidth, continent, size,
-                 tracked=False):
+    def __init__(self, id, bandwidth, continent, size, tracked=False):
+        super().__init__(id, bandwidth, continent, tracked)
+
         # Website size
         self.size = size
-
-        super().__init__(id, type, bandwidth, continent, tracked)
 
     # Divide website requested content into packet stream
     def _get_site_packet_stream(self, time):

@@ -10,10 +10,9 @@ NODE_PROCESSING_TIME = 0.001
 
 class Node:
 
-    def __init__(self, id, type, bandwidth, continent, tracked):
+    def __init__(self, id, bandwidth, continent, tracked):
         # ID of the node (equivalent of IP address)
         self.id = id
-        self.type = type
         # Bandwidth of the node
         self.bandwidth = bandwidth
         # Flag that says if the node is tracked by the attacker
