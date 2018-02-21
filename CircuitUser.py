@@ -9,9 +9,12 @@ from Circuit import *
 
 class CircuitUser(Node):
 
-    def __init__(self, id, time, type, bandwidth, continent,
+    def __init__(self, id, time, bandwidth, continent, relays,
                  pos_guards, pos_middles, pos_exits, tracked=False):
-        super().__init__(id, type, bandwidth, continent, tracked)
+        super().__init__(id, bandwidth, continent, tracked)
+
+        # Map of relay IDs to relay objects
+        self.relays = relays
 
         # Possible guard, middle and exit relay lists for this user
 
@@ -31,5 +34,7 @@ class CircuitUser(Node):
         circuit_exit = self.pos_exits[random.randint(0, len(self.pos_exits) - 1)]
         return circuit_guard, circuit_middle, circuit_exit
 
-    def _get_new_circuit(self, type='General'):
-        return Circuit(self, type, self._select_relays_for_circuit())
+    def _get_new_circuit(self, type='General', time=None):
+        if not time:
+            time = self.time
+        return Circuit(self, time, type, self._select_relays_for_circuit())

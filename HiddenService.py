@@ -8,10 +8,10 @@ from CircuitUser import *
 
 class HiddenService(CircuitUser):
 
-    def __init__(self, id, time, bandwidth, continent, pos_guards, pos_middles,
-                 pos_exits, intro_points, tracked=False):
-        super().__init__(id, time, bandwidth, continent, pos_guards,
-                         pos_middles, pos_exits, tracked)
+    def __init__(self, id, time, bandwidth, continent, relays, pos_guards,
+                 pos_middles, pos_exits, intro_points, tracked=False):
+        super().__init__(id, time, bandwidth, continent, relays,
+                         pos_guards, pos_middles, pos_exits, tracked)
 
         self._setup_intro_points(intro_points)
         # Can have one active Hidden Service - Intro Point circuit
@@ -20,6 +20,8 @@ class HiddenService(CircuitUser):
         # Can have one active Hidden Service - Rendezvous Point
         # circuit for every different client visiting the service
         self.hs_rp_circuits = {}
+        # Maps users to their used rendezvous points
+        self.user_rp = {}
 
         # Hash address counter for ensuring unique hashes
         self.hash_counter = 0
@@ -39,3 +41,23 @@ class HiddenService(CircuitUser):
             self.hs_ip_circuits[address] = circuit
             ip.use_as_intro_point(address, circuit)
             self.hash_counter += 1
+
+    def _setup_rp_circuit(self, rp, address, user_id, time):
+        circuit = self._get_new_circuit(type='HS-RP', time=time)
+        self.hs_rp_circuits[(address, user_id)] = circuit
+        rp.hs_circuits_map[(address, user_id)] = circuit
+
+    def _process_packet(self, sender, packet, circuit=None):
+        curtime = packet.creation_time + packet.lived
+        in_content = packet.split(' ')
+        packet_type = in_content[0]
+        if packet_type.startswith('RP-Establish'):
+            rp_id = in_content[1]
+            user_id = in_content[2]
+            hs_address = in_content[3]
+            rp_relay = self.relays[rp_id]
+            self._setup_rp_circuit(rp_relay, hs_address, user_id, curtime)
+            curtime += self.hs_rp_circuits[(hs_address, user_id)].lived
+            out_content = 'RP-HS {0} {1}'.format(hs_address, user_id)
+            packet = Packet(self.id, curtime, content=out_content)
+            self.hs_rp_circuits[(hs_address, user_id)].send_packets([packet], rp_relay)
