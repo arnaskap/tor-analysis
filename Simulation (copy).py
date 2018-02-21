@@ -2,8 +2,7 @@ import random
 import numpy as np
 
 from Relay import *
-from Client import *
-from Website import *
+from Packet import *
 
 
 GUARD_RELAYS = 205
@@ -26,7 +25,7 @@ def generate_relays(guard_num, middle_num, exit_num, delay):
             exits.append(Relay(i,'exit', delay))
     return guards, middles, exits
 
-# def create_hidden_service(relays, html_size):
+def create_hidden_service(relays, html_size):
 
 
 def generate_circuits(users_num, guards, middles, exits):
@@ -55,7 +54,7 @@ def generate_relay_traffic(circuits, owned_guards, owned_exits, avg_packets_sent
             continue
         generate_user_packets(circuits[u], u, avg_packets_sent, circuit_seconds)
 
-# def connec
+def connec
 
 
 # lots of assumptions here
@@ -79,18 +78,53 @@ def set_user_exits_owned(users, circuits, owned_exits):
 
 
 if __name__ == '__main__':
-    # guards, middles, exits = generate_relays(GUARD_RELAYS, MIDDLE_RELAYS, EXIT_RELAYS, UNIVERSAL_DELAY)
-    time = 0
-    guard = Relay('g1', 'guard', 100000, 'Asia', tracked=True)
-    middle= Relay('m1', 'middle', 50000, 'Europe', tracked=True)
-    exit = Relay('e1', 'exit', 200000, 'North America', tracked=True)
-    guard2 = Relay('g2', 'guard', 100000, 'Asia', tracked=True)
-    middle2 = Relay('m2', 'middle', 50000, 'Europe', tracked=True)
-    exit2 = Relay('e2', 'exit', 200000, 'North America', tracked=True)
-    relays = [guard, guard2, middle, middle2, exit, exit2]
-    user = Client('u1', 0, 75000, 'Europe', relays, [guard], [middle], [exit], None)
-    site = Website('w1', 2000, 'Australia', 150000)
+    guards, middles, exits = generate_relays(GUARD_RELAYS, MIDDLE_RELAYS, EXIT_RELAYS, UNIVERSAL_DELAY)
 
-    user.visit_clearnet_site(site)
-    print(guard.in_traffic)
-    print(guard.out_traffic)
+    tracked_users = [10, 60]
+    circuits = generate_circuits(AVG_CONCURRENT_USERS, guards, middles, exits)
+
+    owned_guard_indexes = random.sample(range(0, len(guards)-1), 2)
+    owned_exit_indexes = random.sample(range(0, len(exits)-1), 2)
+    owned_guards = [guards[i] for i in owned_guard_indexes]
+    owned_exits = [exits[i] for i in owned_exit_indexes]
+    avg_packets_per_user = calculate_user_packets_per_circuit(CONSUMED_BANDWIDTH_PER_SEC, CIRCUIT_SECONDS, AVG_CONCURRENT_USERS)
+    print(avg_packets_per_user)
+    set_user_guards_owned(tracked_users, circuits, owned_guards)
+    set_user_exits_owned(tracked_users, circuits, owned_exits)
+    generate_relay_traffic(circuits, owned_guards, owned_exits, avg_packets_per_user, CIRCUIT_SECONDS)
+    tracked_users_in_owned_guards = []
+    tracked_users_in_owned_exits = []
+    for u in tracked_users:
+        if circuits[u][0] in owned_guards:
+            tracked_users_in_owned_guards.append((u, circuits[u][0]))
+            print('User %d used guard %s is tracked' % (u, circuits[u][0].id))
+        if circuits[u][2] in owned_exits:
+            tracked_users_in_owned_exits.append((u, circuits[u][2]))
+            print('User %d used exit %s is tracked' % (u, circuits[u][2].id))
+    for ug in tracked_users_in_owned_guards:
+        user, guard = ug[0], ug[1]
+        user_traffic = guard.traffic[user]
+        traffic_map = {}
+        predicted_exit = None
+        for t in user_traffic:
+            traffic_map[t.time] = False
+        for exit in owned_exits:
+            cur_traffic_map = traffic_map.copy()
+            true_count = 0
+            all_exit_traffic = exit.get_all_traffic()
+            for packet in all_exit_traffic:
+                guard_time = packet.time - 4.0
+                if traffic_map.get(guard_time, None) is False:
+                    true_count += 1
+                    traffic_map[guard_time] = True
+            print(true_count, len(traffic_map))
+            if true_count >= len(user_traffic)/1.5:
+                predicted_exit = exit
+                break
+        if predicted_exit is not None:
+            print('Predicted exit for tracked user %d is exit %s' % (user, predicted_exit.id))
+            print(circuits[user][2] == predicted_exit)
+        else:
+            print('Tracked user %d not found in owned exits' % user)
+            print(circuits[user][2] not in owned_exits)
+

@@ -50,8 +50,8 @@ class Client(CircuitUser):
 
     # Set new circuit as Client to RP circuit for given hidden
     # service
-    def _establish_c_rp_circuit(self, hs_address):
-        circuit = self._get_new_circuit(type='C-RP', time=self.time)
+    def _establish_c_rp_circuit(self, hs_address, rp_id):
+        circuit = self._get_new_circuit(type='C-RP', time=self.time, exclude=[rp_id])
         self.time += circuit.lived
         self.c_rp_circuits[hs_address] = circuit
 
@@ -66,18 +66,17 @@ class Client(CircuitUser):
 
     # Send first packet to RP through established C-RP circuit,
     # nominating it for HS communication
-    def _nominate_rp(self, hs_address):
+    def _nominate_rp(self, hs_address, rp):
         user_id = self.hs_user_ids[hs_address]
         out_content = 'RP-C {0} {1}'.format(hs_address, user_id)
         rp_packet = Packet(self.id, self.time, content=out_content)
-        rp = self._get_new_rp()
         self.c_rp_circuits[hs_address].send_packets([rp_packet], rp)
         self.time += rp_packet.lived
-        return rp
 
     def _establish_hs_connection(self, hs_address):
-        self._establish_c_rp_circuit(hs_address)
-        rp = self._nominate_rp(hs_address)
+        rp = self._get_new_rp()
+        self._establish_c_rp_circuit(hs_address, rp.id)
+        self._nominate_rp(hs_address, rp)
         self.rps[hs_address] = rp
         self._establish_c_ip_circuit(hs_address)
         self._send_to_ip(hs_address, rp.id)

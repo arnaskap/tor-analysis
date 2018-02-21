@@ -20,7 +20,7 @@ HS_RP_LIFETIME = 600
 
 class Circuit:
 
-    def __init__(self, startpoint, started_at, type, *relays):
+    def __init__(self, startpoint, started_at, type, relays):
         # The initiator node of the circuit
         self.startpoint = startpoint
         # Time at which circuit was started
@@ -35,6 +35,7 @@ class Circuit:
         # If given relays are of appropriate types, set the circuit
         # to the startpoint appended with given relays in the
         # appropriate order
+        print(relays[0])
         if relays[0].type == 'guard' and relays[len(relays)-1].type == 'exit':
             self.circuit = [self.startpoint] + relays
         else:
@@ -61,7 +62,7 @@ class Circuit:
         if self.is_running:
             for i in range(0, len(self.circuit)-1):
                 self.circuit[i].send_packets(self.circuit[i+1], packets)
-            self.circuit[len(self.circuit)-1].send_packets(endpoint, packets, to_endpoint=True, circuit=self.circuit)
+            self.circuit[len(self.circuit)-1].send_packets(endpoint, packets, to_endpoint=True, circuit=self)
             self.lived += packets[len(packets)-1].lived
             if self.lived >= self.lifetime:
                 self._close_circuit()
@@ -86,12 +87,12 @@ class Circuit:
             init_packet = Packet(self.startpoint.id, self.started_at+self.lived,
                                  content='INIT_{0}_relay'.format(str(i)))
             for j in range(i):
-                self.circuit[j].send_packet(init_packet, self.circuit[j+1])
+                self.circuit[j].send_packets(self.circuit[j+1], [init_packet])
             self.lived += init_packet.lived
             init_confirmed_packet = Packet(self.circuit[i].id, self.started_at+self.lived,
                                            content='INITED_{0}_relay'.format(str(i)))
             for j in range(i, 0, -1):
-                self.circuit[j].send_packet(init_confirmed_packet, self.circuit[j-1])
+                self.circuit[j].send_packets(self.circuit[j-1], [init_confirmed_packet])
             self.lived += init_confirmed_packet.lived
         self.is_running = True
 

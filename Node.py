@@ -28,14 +28,16 @@ class Node:
 
     # Receive a packet
     def receive_packet(self, sender, packet, circuit=None, as_endpoint=False):
+        # print(sender.id, self.id, packet.creation_time+packet.lived)
         # Add packet processing time at receiver node to packet total
         # lived time
         packet.lived += NODE_PROCESSING_TIME
         if self.tracked:
-            if sender not in self.in_traffic:
+            # print(sender.id, self.id, packet.creation_time + packet.lived)
+            if sender.id not in self.in_traffic:
                 self.in_traffic[sender.id] = []
             # Add time of arrival
-            self.in_traffic[sender].append(packet.creation_time+packet.lived)
+            self.in_traffic[sender.id].append(packet.creation_time+packet.lived)
         # Packet content analysis to be performed if endpoint
         # receives the packet
         if as_endpoint:
@@ -47,18 +49,18 @@ class Node:
         pass
 
     # Send a stream of packets directly to a destination
-    def send_packets(self, destination, packets, to_endpoint=False):
+    def send_packets(self, destination, packets, to_endpoint=False, circuit=None):
         latency = get_latency(self.continent, destination.continent)
         # The further a packet is in the stream, the more time it
         # takes to start sending it
         size_sent = 0
         if self.tracked:
-            if destination not in self.out_traffic:
+            if destination.id not in self.out_traffic:
                 self.out_traffic[destination.id] = []
         for packet in packets:
             if self.tracked:
                 # Add time of arrival
-                self.out_traffic[destination].append(packet.creation_time+packet.lived)
+                self.out_traffic[destination.id].append(packet.creation_time+packet.lived)
             packet.lived += latency + (packet.size + size_sent) / self.bandwidth
             size_sent += packet.size
-            destination.receive_packet(self, packet, to_endpoint)
+            destination.receive_packet(self, packet, circuit=circuit, as_endpoint=to_endpoint)
