@@ -33,7 +33,6 @@ class Node:
         # lived time
         packet.lived += NODE_PROCESSING_TIME
         if self.tracked:
-            # print(sender.id, self.id, packet.creation_time + packet.lived)
             if sender.id not in self.in_traffic:
                 self.in_traffic[sender.id] = []
             # Add time of arrival

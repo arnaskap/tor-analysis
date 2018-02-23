@@ -4,6 +4,7 @@ import numpy as np
 from Relay import *
 from Client import *
 from Website import *
+from HiddenService import *
 
 
 GUARD_RELAYS = 205
@@ -87,10 +88,20 @@ if __name__ == '__main__':
     guard2 = Relay('g2', 'guard', 100000, 'Asia', tracked=True)
     middle2 = Relay('m2', 'middle', 50000, 'Europe', tracked=True)
     exit2 = Relay('e2', 'exit', 200000, 'North America', tracked=True)
-    relays = [guard, guard2, middle, middle2, exit, exit2]
-    user = Client('u1', 0, 75000, 'Europe', relays, [guard], [middle], [exit], None)
-    site = Website('w1', 2000, 'Australia', 150000)
+    ip = Relay('e2', 'exit', 120000, 'North America')
+    middle3 = Relay('m3', 'middle', 80000, 'Europe', tracked=True)
 
-    user.visit_clearnet_site(site)
+    rs = [guard, guard2, middle, middle2, exit, exit2, ip, middle3]
+    relays = {}
+    for r in rs:
+        relays[r.id] = r
+    site = Website('w1', 150000, 'Australia', 2000)
+    hs = HiddenService('hs1', time, 240000, 'Asia', 3500, relays, [guard2], [middle2], [exit2], [ip])
+
+    ips = hs.ips
+    user = Client('u1', 0, 75000, 'Europe', relays, [guard], [middle], [exit], ips)
+    # user.visit_clearnet_site(site)
+    hs_address = list(ips.keys())[0]
+    user.visit_hidden_service(hs_address)
     print(guard.in_traffic)
     print(guard.out_traffic)

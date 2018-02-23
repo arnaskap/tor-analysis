@@ -35,7 +35,6 @@ class Circuit:
         # If given relays are of appropriate types, set the circuit
         # to the startpoint appended with given relays in the
         # appropriate order
-        print(relays[0])
         if relays[0].type == 'guard' and relays[len(relays)-1].type == 'exit':
             self.circuit = [self.startpoint] + relays
         else:
@@ -72,8 +71,9 @@ class Circuit:
     def send_packets_to_startpoint(self, packets, endpoint):
         if self.is_running:
             endpoint.send_packets(self.circuit[len(self.circuit)-1], packets)
-            for i in range(len(self.circuit)-1, 0, -1):
+            for i in range(len(self.circuit)-1, 1, -1):
                 self.circuit[i].send_packets(self.circuit[i-1], packets)
+            self.circuit[1].send_packets(self.circuit[0], packets, to_endpoint=True)
             self.lived += packets[len(packets) - 1].lived
             if self.lived >= self.lifetime:
                 self._close_circuit()

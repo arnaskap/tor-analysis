@@ -34,7 +34,7 @@ class Client(CircuitUser):
 
     # Get a random relay as the rendezvous point to be used
     def _get_new_rp(self):
-        relays_list = list(self.relays)
+        relays_list = list(self.relays.values())
         return relays_list[random.randint(0, len(relays_list)-1)]
 
     # Set new circuit as general circuit
@@ -82,7 +82,7 @@ class Client(CircuitUser):
         self._send_to_ip(hs_address, rp.id)
 
     def _process_packet(self, sender, packet, circuit=None):
-        in_content = packet.split(' ')
+        in_content = packet.content.split(' ')
         packet_type = in_content[0]
         if packet_type.startswith('RP-confirm') or \
            packet_type.startswith('RP-data'):

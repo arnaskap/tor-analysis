@@ -14,7 +14,6 @@ class HiddenService(CircuitUser):
         super().__init__(id, time, bandwidth, continent, relays,
                          pos_guards, pos_middles, pos_exits, tracked)
 
-        self._setup_intro_points(intro_points)
         # Can have one active Hidden Service - Intro Point circuit
         # for every Intro Point used for this service
         self.hs_ip_circuits = {}
@@ -25,9 +24,11 @@ class HiddenService(CircuitUser):
         self.user_rp = {}
         # Size of website
         self.size = size
-
+        self.ips = {}
         # Hash address counter for ensuring unique hashes
         self.hash_counter = 0
+        self._setup_intro_points(intro_points)
+
 
     # Function for generating new hashes to be used as HS addresses
     def _get_new_hash(self, ip_id):
@@ -52,23 +53,26 @@ class HiddenService(CircuitUser):
             address = self._get_new_hash(ip.id)
             circuit = self._get_new_circuit(type='HS-IP')
             self.hs_ip_circuits[address] = circuit
+            self.ips[address] = ip
             ip.use_as_intro_point(address, circuit)
             self.hash_counter += 1
 
     def _setup_rp_circuit(self, rp, address, user_id, time):
         circuit = self._get_new_circuit(type='HS-RP', time=time)
         self.hs_rp_circuits[(address, user_id)] = circuit
-        rp.hs_circuits_map[(address, user_id)] = circuit
+        rp.hs_rp_circuits[(address, user_id)] = circuit
+        self.user_rp[user_id] = rp
 
     # Send website packets back through a circuit
     def _send_website(self, hs_address, user_id, time):
         packets = self._get_site_packet_stream(hs_address, user_id, time)
         hs_rp_circuit = self.hs_rp_circuits[(hs_address, user_id)]
-        hs_rp_circuit.send_packets_to_startpoint(packets, self)
+        rp = self.user_rp[user_id]
+        hs_rp_circuit.send_packets(packets, rp)
 
     def _process_packet(self, sender, packet, circuit=None):
         curtime = packet.creation_time + packet.lived
-        in_content = packet.split(' ')
+        in_content = packet.content.split(' ')
         packet_type = in_content[0]
         if packet_type.startswith('RP-establish'):
             rp_id = in_content[1]
@@ -83,5 +87,5 @@ class HiddenService(CircuitUser):
         elif packet_type.startswith('RP-GET'):
             hs_address = in_content[1]
             user_id = in_content[2]
-            self._send_website(user_id, hs_address)
+            self._send_website(hs_address, user_id, curtime)
 

@@ -24,18 +24,22 @@ class Relay(Node):
 
     def _process_packet(self, sender, packet, circuit=None):
         curtime = packet.creation_time + packet.lived
-        in_content = packet.split(' ')
+        in_content = packet.content.split(' ')
         packet_type = in_content[0]
         if packet_type  == 'IP':
             hs_address = in_content[1]
             rp_id = in_content[2]
             user_id = in_content[3]
             if hs_address in self.hs_ip_circuits:
-                self.c_rp_circuits[(user_id, hs_address)] = circuit
                 hs_ip_circuit = self.hs_ip_circuits[hs_address]
                 out_content = 'RP-establish {0} {1} {2}'.format(rp_id, user_id, hs_address)
                 packet = Packet(self.id, curtime, content=out_content)
                 hs_ip_circuit.send_packets_to_startpoint([packet], self)
+
+        elif packet_type == 'RP-C':
+            hs_address = in_content[1]
+            user_id = in_content[2]
+            self.c_rp_circuits[(user_id, hs_address)] = circuit
 
         elif packet_type == 'RP-HS':
             hs_address = in_content[1]
