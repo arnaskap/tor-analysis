@@ -10,7 +10,7 @@ class Client(CircuitUser):
 
     def __init__(self, id, time, bandwidth, continent, relays, pos_guards,
                  pos_middles, pos_exits, ips, tracked=False):
-        super().__init__(id, time, bandwidth, continent, relays,
+        super().__init__(id, bandwidth, continent, relays,
                          pos_guards, pos_middles, pos_exits, tracked)
 
         # Possible circuits a user can be using at once
@@ -31,6 +31,8 @@ class Client(CircuitUser):
         self.rps = {}
         # User IDs for hidden services
         self.hs_user_ids = {}
+        # Global time
+        self.time = time
 
     # Get a random relay as the rendezvous point to be used
     def _get_new_rp(self):

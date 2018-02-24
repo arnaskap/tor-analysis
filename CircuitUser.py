@@ -9,7 +9,7 @@ from Circuit import *
 
 class CircuitUser(Node):
 
-    def __init__(self, id, time, bandwidth, continent, relays,
+    def __init__(self, id, bandwidth, continent, relays,
                  pos_guards, pos_middles, pos_exits, tracked=False):
         super().__init__(id, bandwidth, continent, tracked)
 
@@ -22,9 +22,6 @@ class CircuitUser(Node):
         self.pos_guards = pos_guards
         self.pos_middles = pos_middles
         self.pos_exits = pos_exits
-
-        # Global time
-        self.time = time
 
     # Selects guard, middle and exit relays for some circuit at random
     # Note: realistic relay selection is weighted by bandwidth

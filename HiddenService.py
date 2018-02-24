@@ -9,9 +9,9 @@ from CircuitUser import *
 
 class HiddenService(CircuitUser):
 
-    def __init__(self, id, time, bandwidth, continent, size, relays, pos_guards,
+    def __init__(self, id, bandwidth, continent, size, relays, pos_guards,
                  pos_middles, pos_exits, intro_points, tracked=False):
-        super().__init__(id, time, bandwidth, continent, relays,
+        super().__init__(id, bandwidth, continent, relays,
                          pos_guards, pos_middles, pos_exits, tracked)
 
         # Can have one active Hidden Service - Intro Point circuit
@@ -57,6 +57,7 @@ class HiddenService(CircuitUser):
             ip.use_as_intro_point(address, circuit)
             self.hash_counter += 1
 
+    # Establishes an HS-RP circuit for a given user and proposed RP
     def _setup_rp_circuit(self, rp, address, user_id, time):
         circuit = self._get_new_circuit(type='HS-RP', time=time)
         self.hs_rp_circuits[(address, user_id)] = circuit

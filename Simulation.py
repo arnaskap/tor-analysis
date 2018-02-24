@@ -7,14 +7,23 @@ from Website import *
 from HiddenService import *
 
 
-GUARD_RELAYS = 205
-MIDDLE_RELAYS = 370
-EXIT_RELAYS = 80
+GUARD_RELAYS = 12
+MIDDLE_RELAYS = 24
+EXIT_RELAYS = 9
 
-CONSUMED_BANDWIDTH_PER_SEC = 140000000
-AVG_CONCURRENT_USERS = 275000
+CLEARNET_SITES = 20
+HIDDEN_SERVICES = 10
+
+SITE_SIZE_AVG = 3000
+SITE_BW_AVG = 50000
+USER_BW_AVG = 30000
+RELAY_BW_AVG = 150000
+
+USERS_PER_RELAY = 10
+
 
 regions = ['Asia', 'Australia', 'Europe', 'North America', 'South America']
+
 
 def generate_relays(guard_num, middle_num, exit_num, delay):
     guards, middles, exits = [], [], []
@@ -27,7 +36,20 @@ def generate_relays(guard_num, middle_num, exit_num, delay):
             exits.append(Relay(i,'exit', delay))
     return guards, middles, exits
 
-# def create_hidden_service(relays, html_size):
+def get_region():
+    return regions[random.randint(0, len(regions)-1)]
+
+
+def generate_hidden_services(relays, amount):
+    count = 1
+    for count in range(amount+1):
+        id = 'hs{0}'.format(str(count))
+        bw =
+        region = get_region()
+        size =
+
+    hs = HiddenService('hs1', 240000, 'Asia', 3500, relays, [guard2], [middle2], [exit2], [ip])
+    return ips
 
 
 def generate_circuits(users_num, guards, middles, exits):
@@ -82,9 +104,9 @@ def set_user_exits_owned(users, circuits, owned_exits):
 if __name__ == '__main__':
     # guards, middles, exits = generate_relays(GUARD_RELAYS, MIDDLE_RELAYS, EXIT_RELAYS, UNIVERSAL_DELAY)
     time = 0
+    exit = Relay('e1', 'exit', 200000, 'North America', tracked=True)
     guard = Relay('g1', 'guard', 100000, 'Asia', tracked=True)
     middle= Relay('m1', 'middle', 50000, 'Europe', tracked=True)
-    exit = Relay('e1', 'exit', 200000, 'North America', tracked=True)
     guard2 = Relay('g2', 'guard', 100000, 'Asia', tracked=True)
     middle2 = Relay('m2', 'middle', 50000, 'Europe', tracked=True)
     exit2 = Relay('e2', 'exit', 200000, 'North America', tracked=True)
@@ -96,12 +118,13 @@ if __name__ == '__main__':
     for r in rs:
         relays[r.id] = r
     site = Website('w1', 150000, 'Australia', 2000)
-    hs = HiddenService('hs1', time, 240000, 'Asia', 3500, relays, [guard2], [middle2], [exit2], [ip])
+    hs = HiddenService('hs1', 240000, 'Asia', 3500, relays, [guard2], [middle2], [exit2], [ip])
 
     ips = hs.ips
     user = Client('u1', 0, 75000, 'Europe', relays, [guard], [middle], [exit], ips)
-    # user.visit_clearnet_site(site)
+    user.visit_clearnet_site(site)
     hs_address = list(ips.keys())[0]
+    user.visit_hidden_service(hs_address)
     user.visit_hidden_service(hs_address)
     print(guard.in_traffic)
     print(guard.out_traffic)
