@@ -8,8 +8,8 @@ from Packet import *
 
 class Website(Node):
 
-    def __init__(self, id, bandwidth, continent, size, tracked=False):
-        super().__init__(id, bandwidth, continent, tracked)
+    def __init__(self, id, bandwidth, continent, size):
+        super().__init__(id, bandwidth, continent)
 
         # Website size
         self.size = size

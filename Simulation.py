@@ -14,6 +14,9 @@ EXIT_RELAYS = 9
 TRACKED_GUARD_RELAYS = 2
 TRACKED_EXIT_RELAYS = 3
 
+TRACKED_HIDDEN_SERVICES = 1
+TRACKED_USERS = 1
+
 CLEARNET_SITES = 20
 HIDDEN_SERVICES = 10
 
@@ -30,8 +33,9 @@ regions = ['Asia', 'Australia', 'Europe', 'North America', 'South America']
 def get_region():
     return regions[random.randint(0, len(regions)-1)]
 
-def generate_relays(relay_bw, guard_num, middle_num, exit_num, tr_guards, tr_exits):
+def generate_relays(guard_num, middle_num, exit_num, tr_guards, tr_exits, relay_bw):
     guards, middles, exits = [], [], []
+    relays = {}
     tracked_guards, tracked_exits = [], []
     all_relay_num = guard_num + middle_num + exit_num
     guard_avg_bw = relay_bw * guard_num / all_relay_num
@@ -47,6 +51,7 @@ def generate_relays(relay_bw, guard_num, middle_num, exit_num, tr_guards, tr_exi
             tr_guards -= 1
         relay = Relay(id, 'guard', bw, region, tracked=tracked)
         guards.append(relay)
+        relays[id] = relay
         if tracked:
             tracked_guards.append(relay)
     for i in range(middle_num):
@@ -55,6 +60,7 @@ def generate_relays(relay_bw, guard_num, middle_num, exit_num, tr_guards, tr_exi
         region = get_region()
         relay = Relay(id, 'middle', bw, region)
         middles.append(relay)
+        relays[id] = relay
     for i in range(exit_num):
         id = 'e{0}'.format(str(i))
         bw = abs(int(np.random.normal(exit_avg_bw, exit_avg_bw/10)))
@@ -65,15 +71,24 @@ def generate_relays(relay_bw, guard_num, middle_num, exit_num, tr_guards, tr_exi
             tr_exits -= 1
         relay = Relay(id, 'exit', bw, region, tracked=tracked)
         exits.append(relay)
+        relays[id] = relay
         if tracked:
             tracked_exits.append(relay)
-    return guards, middles, exits, tracked_guards, tracked_exits
+    return relays, guards, middles, exits, tracked_guards, tracked_exits
 
+def generate_sites(sites_num, size_avg, bw_avg):
+    sites = []
+    for i in range(sites_num):
+        id = 'ws{0}'.format(str(i))
+        bw = abs(int(np.random.normal(bw_avg, bw_avg / 10)))
+        region = get_region()
+        size = abs(int(np.random.normal(size_avg, size_avg/10)))
+        sites.append(Website(id, bw, region, size))
+    return sites
 
-def generate_hidden_services(relays, amount):
-    count = 1
-    for count in range(amount+1):
-        id = 'hs{0}'.format(str(count))
+def generate_hidden_services(hs_num, relays):
+    for i in range(hs_num):
+        id = 'hs{0}'.format(str(hs_num))
         bw =
         region = get_region()
         size =
@@ -88,15 +103,21 @@ if __name__ == '__main__':
     exit_num = EXIT_RELAYS
     tracked_guards_num = TRACKED_GUARD_RELAYS
     tracked_exits_num = TRACKED_EXIT_RELAYS
+    sites_num = CLEARNET_SITES
+    hs_num = HIDDEN_SERVICES
 
-    guards, middles, exits, tracked_guards, tracked_exits = generate_relays(guard_num,
-                                                                            middle_num,
-                                                                            exit_num,
-                                                                            tracked_guards_num,
-                                                                            tracked_exits_num)
+    relay_bw = RELAY_BW_AVG
+    site_bw = SITE_BW_AVG
 
-    generate_sites()
-    generate_hidden_services()
+    site_size = SITE_SIZE_AVG
+
+    relays, guards, middles, exits,\
+    tracked_guards, tracked_exits = generate_relays(guard_num, middle_num, exit_num,
+                                                    tracked_guards_num, tracked_exits_num,
+                                                    relay_bw)
+
+    sites = generate_sites(sites_num, site_bw, site_size)
+    hidden_services = generate_hidden_services(hs_num, relays, guards, middles, exits)
     generate_users()
 
     time = 0
