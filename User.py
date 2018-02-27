@@ -51,3 +51,4 @@ class User:
             self._visit_site_by_prob(2, 10)
         elif self.type == 3:
             self._visit_site_by_prob(2, 2)
+        self.client.time += 5

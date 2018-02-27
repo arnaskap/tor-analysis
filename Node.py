@@ -10,7 +10,7 @@ NODE_PROCESSING_TIME = 0.001
 
 class Node:
 
-    def __init__(self, id, bandwidth, continent, tracked):
+    def __init__(self, id, bandwidth, continent, tracked=None):
         # ID of the node (equivalent of IP address)
         self.id = id
         # Bandwidth of the node

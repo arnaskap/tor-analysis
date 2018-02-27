@@ -9,7 +9,7 @@ from CircuitUser import *
 
 class HiddenService(CircuitUser):
 
-    def __init__(self, id, bandwidth, continent, size, relays, pos_guards,
+    def __init__(self, id, time, bandwidth, continent, size, relays, pos_guards,
                  pos_middles, pos_exits, intro_points, tracked=False):
         super().__init__(id, bandwidth, continent, relays,
                          pos_guards, pos_middles, pos_exits, tracked)
@@ -27,8 +27,8 @@ class HiddenService(CircuitUser):
         self.ips = {}
         # Hash address counter for ensuring unique hashes
         self.hash_counter = 0
+        self.time = time
         self._setup_intro_points(intro_points)
-
 
     # Function for generating new hashes to be used as HS addresses
     def _get_new_hash(self, ip_id):
