@@ -28,7 +28,8 @@ class Node:
 
     # Receive a packet
     def receive_packet(self, sender, packet, circuit=None, as_endpoint=False):
-        # print(sender.id, self.id, packet.creation_time+packet.lived)
+        # Set previous node of packet to be the sender
+        packet.last_from = sender.id
         # Add packet processing time at receiver node to packet total
         # lived time
         packet.lived += NODE_PROCESSING_TIME
@@ -56,9 +57,19 @@ class Node:
         if self.tracked:
             if destination.id not in self.out_traffic:
                 self.out_traffic[destination.id] = []
-        for packet in packets:
+        for i in range(len(packets)):
+            packet = packets[i]
             if self.tracked:
-                # Add time of arrival
+                # If current node is not originator of packet, change
+                # in traffic from previous sender of packet to
+                # contain next hop in circuit
+                if packet.last_from:
+                    last_in_traffic = self.in_traffic[packet.last_from]
+                    arrival_time = last_in_traffic[-(i+1)]
+                    send_time = packet.creation_time+packet.lived
+                    packet_traffic = (arrival_time, send_time, destination.id)
+                    last_in_traffic[-(i+1)] = packet_traffic
+                # Add time of arrival to out traffic
                 self.out_traffic[destination.id].append(packet.creation_time+packet.lived)
             packet.lived += latency + (packet.size + size_sent) / self.bandwidth
             size_sent += packet.size

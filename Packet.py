@@ -5,10 +5,19 @@
 PACKET_SIZE=586
 
 
+# Possible packet types:
+# IP -
+# RP-C
+# RP-confirm
+# RP-data
+
 class Packet:
 
     def __init__(self, user_id, creation_time, content='DATA'):
+        # original sender of packet
         self.original_from = user_id
+        # previous sender of packet
+        self.last_from = None
         self.creation_time = creation_time
         self.lived = 0
         self.content = content

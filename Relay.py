@@ -75,6 +75,9 @@ class Relay(Node):
             c_rp_circuit.send_packets_to_startpoint(self.data_packets, self)
             self.data_packets = []
 
+    # # function used to emulate functionality of a relay in a
+    # # circuit, receiving a packet and sending it
+    # def receive_and_send(self):
 
     def use_as_intro_point(self, hs_hash, circuit):
         self.hs_ip_circuits[hs_hash] = circuit

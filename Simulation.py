@@ -11,8 +11,8 @@ GUARD_RELAYS = 12
 MIDDLE_RELAYS = 24
 EXIT_RELAYS = 9
 
-TRACKED_GUARD_RELAYS = 9
-TRACKED_EXIT_RELAYS = 3
+TRACKED_GUARD_RELAYS = 12
+TRACKED_EXIT_RELAYS = 9
 
 TRACKED_HIDDEN_SERVICES = 1
 TRACKED_USERS = 1
@@ -119,7 +119,7 @@ def generate_users(relays, guards, middles, exits, users_num, bw_avg, sites, ips
         bw = abs(int(np.random.normal(bw_avg, bw_avg / 10)))
         region = get_region()
         client = Client(id, time, bw, region, relays, guards, middles, exits, ips)
-        user = User(client, 1, sites, list(ips.values()))
+        user = User(client, 1, sites, list(ips.keys()))
         users.append(user)
     return users
 
@@ -157,40 +157,38 @@ if __name__ == '__main__':
 
     users = generate_users(relays, guards, middles, exits, users_num, user_bw, sites, addresses_to_ips, time)
 
-    for user in users:
-        for count in range(10):
-            user.visit_next()
-
-    for g in tracked_guards:
-        print(g.in_traffic)
-        print(g.out_traffic)
-
-    print('exits')
-    for e in tracked_exits:
-        print(e.in_traffic)
-        print(e.out_traffic)
-
-    # exit = Relay('e1', 'exit', 200000, 'North America', tracked=True)
-    # guard = Relay('g1', 'guard', 100000, 'Asia', tracked=True)
-    # middle= Relay('m1', 'middle', 50000, 'Europe', tracked=True)
-    # guard2 = Relay('g2', 'guard', 100000, 'Asia', tracked=True)
-    # middle2 = Relay('m2', 'middle', 50000, 'Europe', tracked=True)
-    # exit2 = Relay('e2', 'exit', 200000, 'North America', tracked=True)
-    # ip = Relay('e2', 'exit', 120000, 'North America')
-    # middle3 = Relay('m3', 'middle', 80000, 'Europe', tracked=True)
+    # for user in users:
+    #     for count in range(10):
+    #         user.visit_next()
     #
-    # rs = [guard, guard2, middle, middle2, exit, exit2, ip, middle3]
-    # relays = {}
-    # for r in rs:
-    #     relays[r.id] = r
-    # site = Website('w1', 150000, 'Australia', 2000)
-    # hs = HiddenService('hs1', 240000, 'Asia', 3500, relays, [guard2], [middle2], [exit2], [ip])
-    #
-    # ips = hs.ips
-    # user = Client('u1', 0, 75000, 'Europe', relays, [guard], [middle], [exit], ips)
-    # user.visit_clearnet_site(site)
-    # hs_address = list(ips.keys())[0]
-    # user.visit_hidden_service(hs_address)
-    # user.visit_hidden_service(hs_address)
-    # print(guard.in_traffic)
-    # print(guard.out_traffic)
+    # for g in tracked_guards:
+    #     print(g.id, g.in_traffic)
+    #     print(g.id, g.out_traffic)
+    # for e in tracked_exits:
+    #     print(e.id, e.in_traffic)
+    #     print(e.id, e.out_traffic)
+
+    exit = Relay('e1', 'exit', 200000, 'North America', tracked=True)
+    guard = Relay('g1', 'guard', 100000, 'Asia', tracked=True)
+    middle= Relay('m1', 'middle', 50000, 'Europe', tracked=True)
+    guard2 = Relay('g2', 'guard', 100000, 'Asia', tracked=True)
+    middle2 = Relay('m2', 'middle', 50000, 'Europe', tracked=True)
+    exit2 = Relay('e2', 'exit', 200000, 'North America', tracked=True)
+    ip = Relay('e2', 'exit', 120000, 'North America')
+    middle3 = Relay('m3', 'middle', 80000, 'Europe', tracked=True)
+
+    rs = [guard, guard2, middle, middle2, exit, exit2, ip, middle3]
+    relays = {}
+    for r in rs:
+        relays[r.id] = r
+    site = Website('w1', 150000, 'Australia', 2000)
+    hs = HiddenService('hs1', 0, 240000, 'Asia', 3500, relays, [guard2], [middle2], [exit2], [ip])
+
+    ips = hs.ips
+    user = Client('u1', 0, 75000, 'Europe', relays, [guard], [middle], [exit], ips)
+    user.visit_clearnet_site(site)
+    hs_address = list(ips.keys())[0]
+    user.visit_hidden_service(hs_address)
+    user.visit_hidden_service(hs_address)
+    print(guard.in_traffic)
+    print(guard.out_traffic)

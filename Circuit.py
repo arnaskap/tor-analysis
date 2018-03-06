@@ -55,6 +55,8 @@ class Circuit:
         # Start the circuit
         self._establish_circuit()
 
+        print(startpoint.id, type, [i.id for i in self.circuit])
+
     # Send a stream of packets from the start point through the
     # circuit to a specified endpoint
     def send_packets(self, packets, endpoint):

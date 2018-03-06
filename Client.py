@@ -46,7 +46,7 @@ class Client(CircuitUser):
         self.general_circuit = circuit
 
     def _establish_c_ip_circuit(self, hs_address):
-        circuit = self._get_new_circuit(type='C-RP', time=self.time)
+        circuit = self._get_new_circuit(type='C-IP', time=self.time)
         self.time += circuit.lived
         self.c_ip_circuits[hs_address] = circuit
 

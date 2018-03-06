@@ -35,12 +35,12 @@ class User:
         else:
             if visit_same_chance < pr_new and self.visited_hidden_services:
                 which_hs = random.randint(0, len(self.visited_hidden_services) - 1)
-                hs_to_visit = self.visited_sites[which_hs]
-                self.client.visit_clearnet_site(hs_to_visit)
+                hs_to_visit = self.visited_hidden_services[which_hs]
+                self.client.visit_hidden_service(hs_to_visit)
             else:
                 which_hs = random.randint(0, len(self.hidden_services) - 1)
-                hs_to_visit = self.sites[which_hs]
-                self.client.visit_clearnet_site(hs_to_visit)
+                hs_to_visit = self.hidden_services[which_hs]
+                self.client.visit_hidden_service(hs_to_visit)
                 if hs_to_visit not in self.visited_hidden_services:
                     self.visited_hidden_services.append(hs_to_visit)
 
