@@ -21,9 +21,9 @@ CLEARNET_SITES = 20
 HIDDEN_SERVICES = 10
 
 SITE_SIZE_AVG = 3000
-SITE_BW_AVG = 50000
-USER_BW_AVG = 30000
-RELAY_BW_AVG = 150000
+SITE_BW_AVG = 5000000
+USER_BW_AVG = 3000000
+RELAY_BW_AVG = 15000000
 
 USERS_PER_RELAY = 10
 
@@ -190,5 +190,49 @@ if __name__ == '__main__':
     hs_address = list(ips.keys())[0]
     user.visit_hidden_service(hs_address)
     user.visit_hidden_service(hs_address)
-    print(guard.in_traffic)
-    print(guard.out_traffic)
+    tracked_user_in = guard.in_traffic['u1']
+    tracked_user_middles = {}
+    for p in tracked_user_in:
+        if len(p) == 4:
+            m = p[2]
+            latency = get_latency(guard.continent, relays[m].continent)
+            if m not in tracked_user_middles:
+                tracked_user_middles[m] = []
+            packet_send_time = p[1]
+            packet_originator = p[3]
+            tracked_user_middles[m].append((packet_send_time+latency, packet_originator))
+    exit_list = [exit]
+    for m in tracked_user_middles:
+        for exit in exit_list:
+            latency = get_latency(relays[m].continent, relays[exit.id].continent)
+            dif = latency + 0.0185
+            error = 0.01
+            i_m, i_e = 0, 0
+            print(exit.in_traffic[m])
+            while i_m < len(tracked_user_middles[m]) and i_e < len(exit.in_traffic[m]):
+                m_time = tracked_user_middles[m][i_m][0]
+                m_originator = tracked_user_middles[m][i_m][1]
+                e_time = exit.in_traffic[m][i_e][0]
+                e_originator = exit.in_traffic[m][i_e][1]
+                if len(exit.in_traffic[m][i_e]) > 2:
+                    e_originator = exit.in_traffic[m][i_e][3]
+                res = e_time - m_time - dif
+                print(e_time, m_time, res)
+                if res <= error and res >= -1 * error:
+                    if m_originator == e_originator:
+                        print('found CORRECT')
+                    else:
+                        print('found FALSE')
+                    i_m += 1
+                    i_e += 1
+                elif res > error:
+                    i_m += 1
+                elif res < -1 * error:
+                    i_e += 1
+    # print(guard.in_traffic['u1'])
+    # print(middle.in_traffic[''])
+    # print(guard2.in_traffic['hs1'])
+    # print(middle2.in_traffic['g2'])
+    # print(guard.out_traffic)
+
+
