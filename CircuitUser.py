@@ -23,6 +23,9 @@ class CircuitUser(Node):
         self.pos_middles = pos_middles
         self.pos_exits = pos_exits
 
+        # Counter used to create unique circuit ids
+        self.circuit_counter = 0
+
     # Selects guard, middle and exit relays for some circuit at random
     # Note: realistic relay selection is weighted by bandwidth
     def _select_relays_for_circuit(self, exclude=None):
@@ -41,6 +44,8 @@ class CircuitUser(Node):
         return [circuit_guard, circuit_middle, circuit_exit]
 
     def _get_new_circuit(self, type='General', time=None, exclude=None):
+        circuit_id = 'circ-{0}-{1}'.format(self.id, self.circuit_counter)
+        self.circuit_counter += 1
         if not time:
             time = self.time
-        return Circuit(self, time, type, self._select_relays_for_circuit(exclude=exclude))
+        return Circuit(circuit_id, self, time, type, self._select_relays_for_circuit(exclude=exclude))

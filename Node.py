@@ -30,11 +30,15 @@ class Node:
     def receive_packet(self, sender, packet, circuit=None, as_endpoint=False):
         # Set previous node of packet to be the sender
         packet.last_from = sender.id
+        circuit_id = '' if not circuit else circuit.id
+        circuit_type = '' if not circuit else circuit.type
         if self.tracked:
             if sender.id not in self.in_traffic:
                 self.in_traffic[sender.id] = []
             # Add time of arrival
-            self.in_traffic[sender.id].append((packet.creation_time+packet.lived, packet.original_from))
+            self.in_traffic[sender.id].append((packet.creation_time+packet.lived,
+                                               packet.original_from, circuit_id,
+                                               circuit_type))
         # Add packet processing time at receiver node to packet total
         # lived time
         packet.lived += NODE_PROCESSING_TIME
@@ -52,8 +56,11 @@ class Node:
     def send_packets(self, destination, packets, to_endpoint=False, circuit=None):
         latency = get_latency(self.continent, destination.continent)
         prev_send_time = packets[0].creation_time + packets[0].lived
-        if self.tracked:
-            if destination.id not in self.out_traffic:
+        # Circuit info of packets later used for traffic confirmation
+        # of attacks
+        circuit_id = '' if not circuit else circuit.id
+        circuit_type = '' if not circuit else circuit.type
+        if self.tracked and destination.id not in self.out_traffic:
                 self.out_traffic[destination.id] = []
         for i in range(len(packets)):
             packet = packets[i]
@@ -66,7 +73,9 @@ class Node:
                 if packet.last_from:
                     last_in_traffic = self.in_traffic[packet.last_from]
                     arrival_time = last_in_traffic[-(len(packets)-i)][0]
-                    packet_traffic = (arrival_time, time_of_send, destination.id, packet.original_from)
+                    packet_traffic = (arrival_time, time_of_send, destination.id,
+                                      packet.original_from, circuit_id,
+                                      circuit_type)
                     last_in_traffic[-(len(packets)-i)] = packet_traffic
                 # Add time of arrival to out traffic
                 self.out_traffic[destination.id].append(time_of_send)

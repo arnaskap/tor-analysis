@@ -20,7 +20,8 @@ HS_RP_LIFETIME = 600
 
 class Circuit:
 
-    def __init__(self, startpoint, started_at, type, relays):
+    def __init__(self, id, startpoint, started_at, type, relays):
+        self.id = id
         # The initiator node of the circuit
         self.startpoint = startpoint
         # Time at which circuit was started
@@ -62,7 +63,7 @@ class Circuit:
     def send_packets(self, packets, endpoint):
         if self.is_running:
             for i in range(0, len(self.circuit)-1):
-                self.circuit[i].send_packets(self.circuit[i+1], packets)
+                self.circuit[i].send_packets(self.circuit[i+1], packets, circuit=self)
             self.circuit[len(self.circuit)-1].send_packets(endpoint, packets, to_endpoint=True, circuit=self)
             self.lived += packets[len(packets)-1].lived
             if self.lived >= self.lifetime:
@@ -72,9 +73,9 @@ class Circuit:
     # through the circuit to the startpoint
     def send_packets_to_startpoint(self, packets, endpoint):
         if self.is_running:
-            endpoint.send_packets(self.circuit[len(self.circuit)-1], packets)
+            endpoint.send_packets(self.circuit[len(self.circuit)-1], packets, circuit=self)
             for i in range(len(self.circuit)-1, 1, -1):
-                self.circuit[i].send_packets(self.circuit[i-1], packets)
+                self.circuit[i].send_packets(self.circuit[i-1], packets, circuit=self)
             self.circuit[1].send_packets(self.circuit[0], packets, to_endpoint=True)
             self.lived += packets[len(packets) - 1].lived
             if self.lived >= self.lifetime:
@@ -89,12 +90,14 @@ class Circuit:
             init_packet = Packet(self.startpoint.id, self.started_at+self.lived,
                                  content='INIT_{0}_relay'.format(str(i)))
             for j in range(i):
-                self.circuit[j].send_packets(self.circuit[j+1], [init_packet])
+                self.circuit[j].send_packets(self.circuit[j+1], [init_packet],
+                                             circuit=self)
             self.lived += init_packet.lived
             init_confirmed_packet = Packet(self.circuit[i].id, self.started_at+self.lived,
                                            content='INITED_{0}_relay'.format(str(i)))
             for j in range(i, 0, -1):
-                self.circuit[j].send_packets(self.circuit[j-1], [init_confirmed_packet])
+                self.circuit[j].send_packets(self.circuit[j-1], [init_confirmed_packet],
+                                             circuit=self)
             self.lived += init_confirmed_packet.lived
         self.is_running = True
 

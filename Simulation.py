@@ -189,46 +189,54 @@ if __name__ == '__main__':
     user.visit_clearnet_site(site)
     hs_address = list(ips.keys())[0]
     user.visit_hidden_service(hs_address)
-    user.visit_hidden_service(hs_address)
+    # user.visit_hidden_service(hs_address)
     tracked_user_in = guard.in_traffic['u1']
     tracked_user_middles = {}
     for p in tracked_user_in:
-        if len(p) == 4:
+        if len(p) == 6:
             m = p[2]
             latency = get_latency(guard.continent, relays[m].continent)
             if m not in tracked_user_middles:
                 tracked_user_middles[m] = []
             packet_send_time = p[1]
-            packet_originator = p[3]
+            packet_originator = p[4]
             tracked_user_middles[m].append((packet_send_time+latency, packet_originator))
     exit_list = [exit]
+    tp, tn, fp, fn = 0, 0, 0, 0
     for m in tracked_user_middles:
         for exit in exit_list:
             latency = get_latency(relays[m].continent, relays[exit.id].continent)
             dif = latency + 0.0185
             error = 0.01
             i_m, i_e = 0, 0
+            cor_found, false_found = 0, 0
             print(exit.in_traffic[m])
             while i_m < len(tracked_user_middles[m]) and i_e < len(exit.in_traffic[m]):
                 m_time = tracked_user_middles[m][i_m][0]
                 m_originator = tracked_user_middles[m][i_m][1]
                 e_time = exit.in_traffic[m][i_e][0]
-                e_originator = exit.in_traffic[m][i_e][1]
-                if len(exit.in_traffic[m][i_e]) > 2:
-                    e_originator = exit.in_traffic[m][i_e][3]
+                e_originator = exit.in_traffic[m][i_e][2]
+                if len(exit.in_traffic[m][i_e]) > 4:
+                    e_originator = exit.in_traffic[m][i_e][4]
                 res = e_time - m_time - dif
-                print(e_time, m_time, res)
+                # print(e_time, m_time, res)
                 if res <= error and res >= -1 * error:
                     if m_originator == e_originator:
-                        print('found CORRECT')
+                        tp += 1
                     else:
-                        print('found FALSE')
+                        fp += 1
                     i_m += 1
                     i_e += 1
                 elif res > error:
                     i_m += 1
-                elif res < -1 * error:
+                else:
+                    if m_originator == e_originator:
+                        fn += 1
+                    else:
+                        tn += 1
                     i_e += 1
+    print('TP: {0}, FP: {1}, TN: {2}, FN: {3}'.format(tp, fp, tn, fn))
+    print(len(exit.in_traffic[m]))
     # print(guard.in_traffic['u1'])
     # print(middle.in_traffic[''])
     # print(guard2.in_traffic['hs1'])

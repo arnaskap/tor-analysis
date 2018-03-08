@@ -18,6 +18,8 @@ class Packet:
         self.original_from = user_id
         # previous sender of packet
         self.last_from = None
+        self.circuit = None
+        self.circuit_type = None
         self.creation_time = creation_time
         self.lived = 0
         self.content = content
