@@ -15,7 +15,7 @@ TRACKED_GUARD_RELAYS = 12
 TRACKED_EXIT_RELAYS = 9
 
 TRACKED_HIDDEN_SERVICES = 1
-TRACKED_USERS = 1
+TRACKED_USERS = 10
 
 CLEARNET_SITES = 20
 HIDDEN_SERVICES = 10
@@ -27,7 +27,7 @@ RELAY_BW_AVG = 15000000
 
 USERS_PER_RELAY = 10
 
-USERS_NUM = 3
+USERS_NUM = 3000
 
 regions = ['Asia', 'Australia', 'Europe', 'North America', 'South America']
 
@@ -96,7 +96,8 @@ def generate_sites(sites_num, size_avg, bw_avg):
     return sites
 
 
-def generate_hidden_services(relays, guards, middles, exits, hs_num, size_avg, bw_avg, time):
+def generate_hidden_services(relays, guards, middles, exits, hs_num,
+                             size_avg, bw_avg, time):
     addresses_to_ips = {}
     hs_list = []
     relay_list = list(relays.values())
@@ -112,8 +113,10 @@ def generate_hidden_services(relays, guards, middles, exits, hs_num, size_avg, b
     return addresses_to_ips, hs_list
 
 
-def generate_users(relays, guards, middles, exits, users_num, bw_avg, sites, ips, time):
+def generate_users(relays, guards, middles, exits, users_num, bw_avg,
+                   sites, ips, time, tracked_no):
     users = []
+    tracked_ids = []
     for i in range(users_num):
         id = 'c{0}'.format(str(i))
         bw = abs(int(np.random.normal(bw_avg, bw_avg / 10)))
@@ -121,7 +124,10 @@ def generate_users(relays, guards, middles, exits, users_num, bw_avg, sites, ips
         client = Client(id, time, bw, region, relays, guards, middles, exits, ips)
         user = User(client, 1, sites, list(ips.keys()))
         users.append(user)
-    return users
+        if tracked_no > 0:
+            tracked_no -= 1
+            tracked_ids.append(client.id)
+    return users, tracked_ids
 
 
 if __name__ == '__main__':
@@ -132,6 +138,7 @@ if __name__ == '__main__':
     tracked_exits_num = TRACKED_EXIT_RELAYS
     sites_num = CLEARNET_SITES
     hs_num = HIDDEN_SERVICES
+    tracked_users_num = TRACKED_USERS
     users_num = USERS_NUM
 
     relay_bw = RELAY_BW_AVG
@@ -155,12 +162,14 @@ if __name__ == '__main__':
                                                                  site_size, site_bw,
                                                                  time)
 
-    users = generate_users(relays, guards, middles, exits, users_num, user_bw, sites, addresses_to_ips, time)
+    users, tracked_users = generate_users(relays, guards, middles, exits,
+                                          users_num, user_bw, sites,
+                                          addresses_to_ips, time, tracked_users_num)
 
-    # for user in users:
-    #     for count in range(10):
-    #         user.visit_next()
-    #
+    for user in users:
+        for count in range(10):
+            user.visit_next()
+
     # for g in tracked_guards:
     #     print(g.id, g.in_traffic)
     #     print(g.id, g.out_traffic)
@@ -168,79 +177,90 @@ if __name__ == '__main__':
     #     print(e.id, e.in_traffic)
     #     print(e.id, e.out_traffic)
 
-    exit = Relay('e1', 'exit', 200000, 'North America', tracked=True)
-    guard = Relay('g1', 'guard', 100000, 'Asia', tracked=True)
-    middle= Relay('m1', 'middle', 50000, 'Europe', tracked=True)
-    guard2 = Relay('g2', 'guard', 100000, 'Asia', tracked=True)
-    middle2 = Relay('m2', 'middle', 50000, 'Europe', tracked=True)
-    exit2 = Relay('e2', 'exit', 200000, 'North America', tracked=True)
-    ip = Relay('e2', 'exit', 120000, 'North America')
-    middle3 = Relay('m3', 'middle', 80000, 'Europe', tracked=True)
-
-    rs = [guard, guard2, middle, middle2, exit, exit2, ip, middle3]
-    relays = {}
-    for r in rs:
-        relays[r.id] = r
-    site = Website('w1', 150000, 'Australia', 2000)
-    hs = HiddenService('hs1', 0, 240000, 'Asia', 3500, relays, [guard2], [middle2], [exit2], [ip])
-
-    ips = hs.ips
-    user = Client('u1', 0, 75000, 'Europe', relays, [guard], [middle], [exit], ips)
-    user.visit_clearnet_site(site)
-    hs_address = list(ips.keys())[0]
-    user.visit_hidden_service(hs_address)
+    # exit = Relay('e1', 'exit', 200000, 'North America', tracked=True)
+    # guard = Relay('g1', 'guard', 100000, 'Asia', tracked=True)
+    # middle= Relay('m1', 'middle', 50000, 'Europe', tracked=True)
+    # guard2 = Relay('g2', 'guard', 100000, 'Asia', tracked=True)
+    # middle2 = Relay('m2', 'middle', 50000, 'Europe', tracked=True)
+    # exit2 = Relay('e2', 'exit', 200000, 'North America', tracked=True)
+    # ip = Relay('e2', 'exit', 120000, 'North America')
+    # middle3 = Relay('m3', 'middle', 80000, 'Europe', tracked=True)
+    #
+    # rs = [guard, guard2, middle, middle2, exit, exit2, ip, middle3]
+    # relays = {}
+    # for r in rs:
+    #     relays[r.id] = r
+    # site = Website('w1', 150000, 'Australia', 2000)
+    # hs = HiddenService('hs1', 0, 240000, 'Asia', 3500, relays, [guard2], [middle2], [exit2], [ip])
+    #
+    # ips = hs.ips
+    # user = Client('u1', 0, 75000, 'Europe', relays, [guard], [middle], [exit], ips)
+    # user.visit_clearnet_site(site)
+    # hs_address = list(ips.keys())[0]
     # user.visit_hidden_service(hs_address)
-    tracked_user_in = guard.in_traffic['u1']
-    tracked_user_middles = {}
-    for p in tracked_user_in:
-        if len(p) == 6:
-            m = p[2]
-            latency = get_latency(guard.continent, relays[m].continent)
-            if m not in tracked_user_middles:
-                tracked_user_middles[m] = []
-            packet_send_time = p[1]
-            packet_originator = p[4]
-            tracked_user_middles[m].append((packet_send_time+latency, packet_originator))
-    exit_list = [exit]
+    # # user.visit_hidden_service(hs_address)
+    # tracked_user_in = guard.in_traffic['u1']
+    # tracked_user_middles = {}
+    tr_user_guard_traffic = {}
+    for u in tracked_users:
+        tr_user_guard_traffic[u] = {}
+    for g in tracked_guards:
+        # print(list(g.in_traffic.keys()))
+        for u in tracked_users:
+            if u in g.in_traffic:
+                tracked_user_in = g.in_traffic[u]
+                for p in tracked_user_in:
+                    if len(p) == 6:
+                        m = p[2]
+                        latency = get_latency(g.continent, relays[m].continent)
+                        if m not in tr_user_guard_traffic[u]:
+                            tr_user_guard_traffic[u][m] = []
+                        packet_send_time = p[1]
+                        packet_circuit_id = p[4]
+                        packet_circuit_type = p[5]
+                        tr_user_guard_traffic[u][m].append((packet_send_time+latency,
+                                                            packet_circuit_id,
+                                                            packet_circuit_type))
+    # print('TRACKED TRAFFIC', tr_user_guard_traffic)
     tp, tn, fp, fn = 0, 0, 0, 0
-    for m in tracked_user_middles:
-        for exit in exit_list:
-            latency = get_latency(relays[m].continent, relays[exit.id].continent)
-            dif = latency + 0.0185
-            error = 0.01
-            i_m, i_e = 0, 0
-            cor_found, false_found = 0, 0
-            print(exit.in_traffic[m])
-            while i_m < len(tracked_user_middles[m]) and i_e < len(exit.in_traffic[m]):
-                m_time = tracked_user_middles[m][i_m][0]
-                m_originator = tracked_user_middles[m][i_m][1]
-                e_time = exit.in_traffic[m][i_e][0]
-                e_originator = exit.in_traffic[m][i_e][2]
-                if len(exit.in_traffic[m][i_e]) > 4:
-                    e_originator = exit.in_traffic[m][i_e][4]
-                res = e_time - m_time - dif
-                # print(e_time, m_time, res)
-                if res <= error and res >= -1 * error:
-                    if m_originator == e_originator:
-                        tp += 1
-                    else:
-                        fp += 1
-                    i_m += 1
-                    i_e += 1
-                elif res > error:
-                    i_m += 1
-                else:
-                    if m_originator == e_originator:
-                        fn += 1
-                    else:
-                        tn += 1
-                    i_e += 1
+    for u in tr_user_guard_traffic:
+        for m in tr_user_guard_traffic[u]:
+            for exit in tracked_exits:
+                if m in exit.in_traffic:
+                    latency = get_latency(relays[m].continent, relays[exit.id].continent)
+                    dif = latency + 0.0185
+                    error = 0.0175
+                    i_m, i_e = 0, 0
+                    cor_found, false_found = 0, 0
+                    t_to_mid = tr_user_guard_traffic[u][m]
+                    t_in_ex = exit.in_traffic[m]
+                    print(dif, '\n', t_to_mid, '\n', t_in_ex)
+                    print(' ')
+                    while i_m < len(t_to_mid) and i_e < len(t_in_ex):
+                        m_time = t_to_mid[i_m][0]
+                        m_originator = t_to_mid[i_m][1]
+                        e_time = t_in_ex[i_e][0]
+                        e_originator = t_in_ex[i_e][2]
+                        if len(t_in_ex[i_e]) > 4:
+                            e_originator = t_in_ex[i_e][4]
+                        res = e_time - m_time - dif
+                        # print(e_time, m_time, res)
+                        if res <= error and res >= -1 * error:
+                            if m_originator == e_originator:
+                                tp += 1
+                            else:
+                                fp += 1
+                            i_m += 1
+                            i_e += 1
+                        elif res > error:
+                            i_m += 1
+                        else:
+                            if m_originator == e_originator:
+                                fn += 1
+                            else:
+                                tn += 1
+                            i_e += 1
     print('TP: {0}, FP: {1}, TN: {2}, FN: {3}'.format(tp, fp, tn, fn))
-    print(len(exit.in_traffic[m]))
-    # print(guard.in_traffic['u1'])
-    # print(middle.in_traffic[''])
-    # print(guard2.in_traffic['hs1'])
-    # print(middle2.in_traffic['g2'])
-    # print(guard.out_traffic)
+    # print(len(exit.in_traffic[m]))
 
 
