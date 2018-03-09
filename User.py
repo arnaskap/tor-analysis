@@ -1,11 +1,16 @@
 # User class that visits websites based on predefined behaviour types
 
 # Types:
-# 1 - visits clearnet sites more often than hidden services, high probability to revisit same sites
-# 2 - visits hidden services as often as clearnet sites, high probability to revisit same sites
-# 3 - visits hidden services as often as clearnet sites, picks visited websites randomly
+# 1 - visits clearnet sites more often than hidden services, high probability to revisit same sites, visits often
+# 2 - visits hidden services as often as clearnet sites, high probability to revisit same sites, visits often
+# 3 - visits hidden services as often as clearnet sites, picks visited websites randomly, visits often
+# 4 - visits clearnet sites more often than hidden services, high probability to revisit same sites, visits rarely
+# 5 - visits hidden services as often as clearnet sites, high probability to revisit same sites, visits rarely
+# 6 - visits hidden services as often as clearnet sites, picks visited websites randomly, visits rarely
+
 
 import random
+import numpy as np
 
 
 class User:
@@ -45,10 +50,14 @@ class User:
                     self.visited_hidden_services.append(hs_to_visit)
 
     def visit_next(self):
-        if self.type == 1:
+        if self.type < 4:
+            self.client.time += abs(np.random.normal(5, 2.5))
+        else:
+            self.client.time += abs(np.random.normal(15, 5))
+
+        if self.type == 1 or self.type == 4:
            self._visit_site_by_prob(5, 10)
-        elif self.type == 2:
+        elif self.type == 2 or self.type == 5:
             self._visit_site_by_prob(2, 10)
-        elif self.type == 3:
+        elif self.type == 3 or self.type == 6:
             self._visit_site_by_prob(2, 2)
-        self.client.time += 5

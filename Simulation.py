@@ -7,11 +7,11 @@ from HiddenService import *
 from User import *
 
 
-GUARD_RELAYS = 12
+GUARD_RELAYS = 10
 MIDDLE_RELAYS = 24
 EXIT_RELAYS = 9
 
-TRACKED_GUARD_RELAYS = 12
+TRACKED_GUARD_RELAYS = 10
 TRACKED_EXIT_RELAYS = 9
 
 TRACKED_HIDDEN_SERVICES = 1
@@ -25,7 +25,7 @@ SITE_BW_AVG = 5000000
 USER_BW_AVG = 3000000
 RELAY_BW_AVG = 15000000
 
-USERS_PER_RELAY = 10
+USERS_PER_RELAY = 20
 
 USERS_NUM = 3000
 
@@ -122,7 +122,8 @@ def generate_users(relays, guards, middles, exits, users_num, bw_avg,
         bw = abs(int(np.random.normal(bw_avg, bw_avg / 10)))
         region = get_region()
         client = Client(id, time, bw, region, relays, guards, middles, exits, ips)
-        user = User(client, 1, sites, list(ips.keys()))
+        user_type = random.randint(1, 6)
+        user = User(client, user_type, sites, list(ips.keys()))
         users.append(user)
         if tracked_no > 0:
             tracked_no -= 1
@@ -167,7 +168,7 @@ if __name__ == '__main__':
                                           addresses_to_ips, time, tracked_users_num)
 
     for user in users:
-        for count in range(10):
+        while user.client.time < 700:
             user.visit_next()
 
     # for g in tracked_guards:
@@ -202,6 +203,7 @@ if __name__ == '__main__':
     # tracked_user_in = guard.in_traffic['u1']
     # tracked_user_middles = {}
     tr_user_guard_traffic = {}
+    rel_middles= []
     for u in tracked_users:
         tr_user_guard_traffic[u] = {}
     for g in tracked_guards:
@@ -215,27 +217,32 @@ if __name__ == '__main__':
                         latency = get_latency(g.continent, relays[m].continent)
                         if m not in tr_user_guard_traffic[u]:
                             tr_user_guard_traffic[u][m] = []
+                        if m not in rel_middles:
+                            rel_middles.append(m)
                         packet_send_time = p[1]
                         packet_circuit_id = p[4]
                         packet_circuit_type = p[5]
                         tr_user_guard_traffic[u][m].append((packet_send_time+latency,
                                                             packet_circuit_id,
                                                             packet_circuit_type))
-    # print('TRACKED TRAFFIC', tr_user_guard_traffic)
+    for exit in tracked_exits:
+        for m in rel_middles:
+            exit.in_traffic[m].sort(key=lambda x: x[0])
+            print('!!!!!!!!!', exit.in_traffic[m])
     tp, tn, fp, fn = 0, 0, 0, 0
     for u in tr_user_guard_traffic:
         for m in tr_user_guard_traffic[u]:
             for exit in tracked_exits:
                 if m in exit.in_traffic:
                     latency = get_latency(relays[m].continent, relays[exit.id].continent)
-                    dif = latency + 0.0185
-                    error = 0.0175
+                    dif = latency + 0.0016
+                    error = 0.0005
                     i_m, i_e = 0, 0
                     cor_found, false_found = 0, 0
                     t_to_mid = tr_user_guard_traffic[u][m]
                     t_in_ex = exit.in_traffic[m]
-                    print(dif, '\n', t_to_mid, '\n', t_in_ex)
-                    print(' ')
+                    # print(dif, '\n', t_to_mid, '\n', t_in_ex)
+                    # print(' ')
                     while i_m < len(t_to_mid) and i_e < len(t_in_ex):
                         m_time = t_to_mid[i_m][0]
                         m_originator = t_to_mid[i_m][1]
@@ -244,10 +251,10 @@ if __name__ == '__main__':
                         if len(t_in_ex[i_e]) > 4:
                             e_originator = t_in_ex[i_e][4]
                         res = e_time - m_time - dif
-                        # print(e_time, m_time, res)
                         if res <= error and res >= -1 * error:
                             if m_originator == e_originator:
                                 tp += 1
+                                print(m_time+dif - e_time)
                             else:
                                 fp += 1
                             i_m += 1
