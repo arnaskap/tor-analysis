@@ -51,9 +51,9 @@ class User:
 
     def visit_next(self):
         if self.type < 4:
-            self.client.time += abs(np.random.normal(5, 2.5))
+            self.client.time += abs(np.random.normal(1, 0.5))
         else:
-            self.client.time += abs(np.random.normal(15, 5))
+            self.client.time += abs(np.random.normal(8, 5))
 
         if self.type == 1 or self.type == 4:
            self._visit_site_by_prob(5, 10)
