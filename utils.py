@@ -1,3 +1,5 @@
+import numpy as np
+
 # Latency dictionary between continents, values in seconds
 LATENCY = {
     ('Asia', 'Asia'): 0.01,

@@ -1,6 +1,7 @@
 # Superclass representing network nodes that provides packet
 # sending/receiving and traffic logging
 
+import numpy as np
 from utils import *
 
 # Time it takes for node to process received packets (read headers,
@@ -41,7 +42,8 @@ class Node:
                                                circuit_type))
         # Add packet processing time at receiver node to packet total
         # lived time
-        packet.lived += NODE_PROCESSING_TIME
+        proc_time = abs(int(np.random.normal(NODE_PROCESSING_TIME, NODE_PROCESSING_TIME)))
+        packet.lived += proc_time
         # Packet content analysis to be performed if endpoint
         # receives the packet
         if as_endpoint:
