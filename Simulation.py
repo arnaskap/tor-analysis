@@ -7,15 +7,15 @@ from HiddenService import *
 from User import *
 
 
-GUARD_RELAYS = 100
-MIDDLE_RELAYS = 240
-EXIT_RELAYS = 90
+GUARD_RELAYS = 20
+MIDDLE_RELAYS = 48
+EXIT_RELAYS = 18
 
 TRACKED_GUARD_RELAYS = 3
 TRACKED_EXIT_RELAYS = 3
 
 TRACKED_HIDDEN_SERVICES = 1
-TRACKED_USERS = 100
+TRACKED_USERS = 40
 
 CLEARNET_SITES = 20
 HIDDEN_SERVICES = 10
@@ -25,10 +25,14 @@ SITE_BW_AVG = 5000000
 USER_BW_AVG = 3000000
 RELAY_BW_AVG = 15000000
 
-USERS_NUM = 10000
+USERS_NUM = 1000
 
 TIME_TO_RUN = 3000
 TOTAL_RUNS = 10
+CIRCUIT_TIME = 600
+
+PREDICTED_SEND_TIME = 0.0016
+ERROR = 0.016
 
 regions = ['Asia', 'Australia', 'Europe', 'North America', 'South America']
 
@@ -147,6 +151,7 @@ if __name__ == '__main__':
     hs_num = HIDDEN_SERVICES
     tracked_users_num = TRACKED_USERS
     users_num = USERS_NUM
+    circuit_time = CIRCUIT_TIME
 
     relay_bw = RELAY_BW_AVG
     site_bw = SITE_BW_AVG
@@ -156,13 +161,12 @@ if __name__ == '__main__':
 
     runs = TOTAL_RUNS
 
-    relays, guards, middles, exits,\
-    tracked_guards, tracked_exits = generate_relays(guard_num, middle_num, exit_num,
-                                                    tracked_guards_num, tracked_exits_num,
-                                                    relay_bw)
-
     total_time = 0
     for i in range(runs):
+        relays, guards, middles, exits, \
+        tracked_guards, tracked_exits = generate_relays(guard_num, middle_num, exit_num,
+                                                        tracked_guards_num, tracked_exits_num,
+                                                        relay_bw)
         sites = generate_sites(sites_num, site_size, site_bw)
 
         time = 0
@@ -185,29 +189,32 @@ if __name__ == '__main__':
             # print(user.client.circuit_counter)
         print('GENERATED TRACKED USER TRAFFIC')
         while t_t_r > 0:
-            time_for_traffic = min(t_t_r, 600)
-            t_t_r -= 600
+            time_for_traffic = min(t_t_r, circuit_time)
+            t_t_r -= circuit_time
             guard_users_num = users_num // len(guards)
             for g in tracked_guards:
+                print('Generating for guard {0}...'.format(g.id))
                 guard_users = generate_users(relays, [g], middles, exits,
                                              guard_users_num, user_bw, sites,
-                                             addresses_to_ips, time, time_range=600)
+                                             addresses_to_ips, time, time_range=circuit_time)
                 for user in guard_users:
-                    while user.client.time < time_for_traffic:
+                    user_start_time = user.client.time
+                    while user.client.time < user_start_time + time_for_traffic:
                         user.visit_next()
 
             exit_users_num = users_num // len(exits)
             for e in tracked_exits:
+                print('Generating for exit {0}...'.format(e.id))
                 exit_users = generate_users(relays, guards, middles, [e],
                                             exit_users_num, user_bw, sites,
-                                            addresses_to_ips, time, time_range=600)
+                                            addresses_to_ips, time, time_range=circuit_time)
                 for user in exit_users:
                     user_start_time = user.client.time
                     while user.client.time < user_start_time + time_for_traffic:
                         user.visit_next()
             print('GENERATED TRAFFIC FOR TRACKED EXITS AND GUARDS AT TIME {0}'.format(time))
 
-            time += 600
+            time += circuit_time
 
         tr_user_guard_traffic = {}
         rel_middles= []
@@ -240,19 +247,25 @@ if __name__ == '__main__':
                     exit.in_traffic[m].sort(key=lambda x: x[0])
                     # print('!!!!!!!!!', exit.in_traffic[m])
         tp, tn, fp, fn = 0, 0, 0, 0
-        tp_by_circuit = {
+        tp_by_circuit_type = {
             'General': 0,
             'C-IP':    0,
             'C-RP':    0,
         }
+        deanonymised_circuit_types = {
+            'General': 0,
+            'C-IP': 0,
+            'C-RP': 0
+        }
+        deanonymised_circuits = []
         found_users = []
         for u in tr_user_guard_traffic:
             for m in tr_user_guard_traffic[u]:
                 for exit in tracked_exits:
                     if m in exit.in_traffic:
                         latency = get_latency(relays[m].continent, relays[exit.id].continent)
-                        dif = latency + 0.0016
-                        error = 0.002
+                        dif = latency + PREDICTED_SEND_TIME
+                        error = ERROR
                         i_m, i_e = 0, 0
                         cor_found, false_found = 0, 0
                         t_to_mid = tr_user_guard_traffic[u][m]
@@ -274,9 +287,11 @@ if __name__ == '__main__':
                                 if m_circuit == e_circuit:
                                     if e_originator not in found_users:
                                         found_users.append(e_originator)
+                                    if m_circuit not in deanonymised_circuits:
+                                        deanonymised_circuits.append(m_circuit)
+                                        deanonymised_circuit_types[m_circuit_type] += 1
                                     tp += 1
-                                    tp_by_circuit[m_circuit_type] += 1
-                                    # print(m_time+dif - e_time)
+                                    tp_by_circuit_type[m_circuit_type] += 1
                                 else:
                                     fp += 1
                                 i_m += 1
@@ -285,14 +300,15 @@ if __name__ == '__main__':
                                 i_m += 1
                             else:
                                 if m_circuit == e_circuit:
-                                    print(res)
+                                    # print(res)
                                     fn += 1
                                 else:
                                     tn += 1
                                 i_e += 1
         print('TP: {0}, FP: {1}, TN: {2}, FN: {3}'.format(tp, fp, tn, fn))
-        print(tp_by_circuit)
-        print(found_users)
+        print(tp_by_circuit_type)
+        print('Total deanonymised users - {0} of {1} tracked'.format(len(found_users), len(tracked_users)))
+        print(deanonymised_circuit_types)
     print(total_time)
     # print(len(exit.in_traffic[m]))
 

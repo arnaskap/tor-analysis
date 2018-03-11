@@ -32,4 +32,6 @@ LATENCY = {
 
 # Return latency between locations
 def get_latency(c1, c2):
-    return LATENCY[(c1, c2)]
+    st_latency = LATENCY[(c1, c2)]
+    latency = abs(np.random.normal(st_latency, 0.002))
+    return latency
