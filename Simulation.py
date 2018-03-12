@@ -7,32 +7,32 @@ from HiddenService import *
 from User import *
 
 
-GUARD_RELAYS = 20
-MIDDLE_RELAYS = 48
-EXIT_RELAYS = 18
+GUARD_RELAYS = 120
+MIDDLE_RELAYS = 180
+EXIT_RELAYS = 90
 
-TRACKED_GUARD_RELAYS = 3
-TRACKED_EXIT_RELAYS = 3
-
-TRACKED_HIDDEN_SERVICES = 1
-TRACKED_USERS = 40
-
-CLEARNET_SITES = 20
-HIDDEN_SERVICES = 10
+CLEARNET_SITES = 100
+HIDDEN_SERVICES = 30
 
 SITE_SIZE_AVG = 3000
 SITE_BW_AVG = 5000000
 USER_BW_AVG = 3000000
 RELAY_BW_AVG = 15000000
 
-USERS_NUM = 1000
+USERS_NUM = 30000
 
 TIME_TO_RUN = 3000
-TOTAL_RUNS = 10
+TOTAL_RUNS = 3
 CIRCUIT_TIME = 600
 
+TRACKED_GUARD_RELAYS = 3
+TRACKED_EXIT_RELAYS = 3
+
+TRACKED_HIDDEN_SERVICES = 1
+TRACKED_USERS = 250
+
 PREDICTED_SEND_TIME = 0.0016
-ERROR = 0.016
+ERROR = 0.01
 
 regions = ['Asia', 'Australia', 'Europe', 'North America', 'South America']
 
@@ -162,6 +162,9 @@ if __name__ == '__main__':
     runs = TOTAL_RUNS
 
     total_time = 0
+    all_tp, all_fp, all_tn, all_fn = 0, 0, 0, 0
+    avg_rec, avg_prec = 0, 0
+    avg_deanonymise_rate = 0
     for i in range(runs):
         relays, guards, middles, exits, \
         tracked_guards, tracked_exits = generate_relays(guard_num, middle_num, exit_num,
@@ -300,16 +303,25 @@ if __name__ == '__main__':
                                 i_m += 1
                             else:
                                 if m_circuit == e_circuit:
-                                    # print(res)
                                     fn += 1
                                 else:
                                     tn += 1
                                 i_e += 1
         print('TP: {0}, FP: {1}, TN: {2}, FN: {3}'.format(tp, fp, tn, fn))
+        print('Recall: {0}, Precision: {1}'.format(tp/(tp+fn), tp/(tp+fp)))
         print(tp_by_circuit_type)
         print('Total deanonymised users - {0} of {1} tracked'.format(len(found_users), len(tracked_users)))
         print(deanonymised_circuit_types)
-    print(total_time)
+        all_tp += tp
+        all_fp += fp
+        all_tn += tn
+        all_fn += fn
+        avg_prec += tp / (tp + fp)
+        avg_rec += tp / (tp + fn)
+        avg_deanonymise_rate += len(found_users) / len(tracked_users)
+    print(all_tp, all_fp, all_tn, all_fn)
+    print(avg_prec / runs, avg_rec / runs)
+    print(avg_deanonymise_rate / runs)
     # print(len(exit.in_traffic[m]))
 
 

@@ -1,5 +1,7 @@
 import numpy as np
 
+LATENCY_VARIATION = 0.015
+
 # Latency dictionary between continents, values in seconds
 LATENCY = {
     ('Asia', 'Asia'): 0.01,
@@ -33,5 +35,5 @@ LATENCY = {
 # Return latency between locations
 def get_latency(c1, c2):
     st_latency = LATENCY[(c1, c2)]
-    latency = abs(np.random.normal(st_latency, 0.002))
+    latency = abs(np.random.normal(st_latency, LATENCY_VARIATION))
     return latency
