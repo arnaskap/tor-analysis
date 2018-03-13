@@ -1,5 +1,7 @@
 # Main simulation class for test setup, generation and analysis
 
+import datetime
+
 from Relay import *
 from Client import *
 from Website import *
@@ -7,9 +9,9 @@ from HiddenService import *
 from User import *
 
 
-GUARD_RELAYS = 120
-MIDDLE_RELAYS = 180
-EXIT_RELAYS = 90
+GUARD_RELAYS = 80
+MIDDLE_RELAYS = 120
+EXIT_RELAYS = 60
 
 CLEARNET_SITES = 100
 HIDDEN_SERVICES = 30
@@ -19,7 +21,7 @@ SITE_BW_AVG = 5000000
 USER_BW_AVG = 3000000
 RELAY_BW_AVG = 15000000
 
-USERS_NUM = 30000
+USERS_NUM = 15000
 
 TIME_TO_RUN = 3000
 TOTAL_RUNS = 3
@@ -102,7 +104,7 @@ def generate_sites(sites_num, size_avg, bw_avg):
 
 
 def generate_hidden_services(relays, guards, middles, exits, hs_num,
-                             size_avg, bw_avg, time):
+                             size_avg, bw_avg, time, low_guards_no=False):
     addresses_to_ips = {}
     hs_list = []
     relay_list = list(relays.values())
@@ -110,9 +112,12 @@ def generate_hidden_services(relays, guards, middles, exits, hs_num,
         id = 'hs{0}'.format(str(i))
         bw = abs(int(np.random.normal(bw_avg, bw_avg / 10)))
         region = get_region()
+        pos_guards = guards
+        if low_guards_no:
+            pos_guards = [guards[i] for i in random.sample(range(len(guards)), 3)]
         size = abs(int(np.random.normal(size_avg, size_avg/10)))
         ips = get_intro_points(relay_list, 1)
-        hs = HiddenService(id, time, bw, region, size, relays, guards, middles, exits, ips)
+        hs = HiddenService(id, time, bw, region, size, relays, pos_guards, middles, exits, ips)
         addresses_to_ips.update(hs.ips)
         hs_list.append(hs)
     return addresses_to_ips, hs_list
@@ -142,6 +147,31 @@ def generate_users(relays, guards, middles, exits, users_num, bw_avg,
 
 
 if __name__ == '__main__':
+    now = datetime.datetime.now()
+    filename = 'results/{0}.res'.format(now)
+    res_file = open(filename, 'w')
+    env_string = """GUARD_RELAYS = {0}
+MIDDLE_RELAYS = {1}
+EXIT_RELAYS = {2}
+TRACKED_GUARD_RELAYS = {3}
+TRACKED_EXIT_RELAYS = {4}
+CLEARNET_SITES = {5}
+HIDDEN_SERVICES = {6}
+TRACKED_USERS = {7}
+USERS_NUM = {8}
+RELAY_BW_AVG = {9}
+SITE_BW_AVG = {10}
+USER_BW_AVG = {11}
+SITE_SIZE_AVG = {12}
+TOTAL_RUNS = {13}
+TIME_TO_RUN = {14}\n""".format(GUARD_RELAYS, MIDDLE_RELAYS, EXIT_RELAYS, TRACKED_GUARD_RELAYS,
+                               TRACKED_EXIT_RELAYS, CLEARNET_SITES, HIDDEN_SERVICES, TRACKED_USERS,
+                               USERS_NUM, RELAY_BW_AVG, SITE_BW_AVG, USER_BW_AVG, SITE_SIZE_AVG,
+                               TOTAL_RUNS, TIME_TO_RUN)
+
+    print(env_string)
+    res_file.write(env_string)
+
     guard_num = GUARD_RELAYS
     middle_num = MIDDLE_RELAYS
     exit_num = EXIT_RELAYS
@@ -307,11 +337,15 @@ if __name__ == '__main__':
                                 else:
                                     tn += 1
                                 i_e += 1
-        print('TP: {0}, FP: {1}, TN: {2}, FN: {3}'.format(tp, fp, tn, fn))
-        print('Recall: {0}, Precision: {1}'.format(tp/(tp+fn), tp/(tp+fp)))
-        print(tp_by_circuit_type)
-        print('Total deanonymised users - {0} of {1} tracked'.format(len(found_users), len(tracked_users)))
-        print(deanonymised_circuit_types)
+        cm_str = 'TP: {0}, FP: {1}, TN: {2}, FN: {3}\n'.format(tp, fp, tn, fn)
+        rp_str = 'Recall: {0}, Precision: {1}\n'.format(tp/(tp+fn), tp/(tp+fp))
+        ctp_str = 'Packets matched by circuit type: {0}\n'.format(tp_by_circuit_type)
+        du_str = 'Total deanonymised users - {0} of {1} tracked\n'.format(len(found_users), len(tracked_users))
+        cd_str = 'Deanonymised circuits by type: {0}\n'.format(deanonymised_circuit_types)
+        print('RESULTS FOR RUN {0} OF {1}:'.format(i+1, runs))
+        print(cm_str+rp_str+ctp_str+du_str+cd_str)
+        res_file.write('RESULTS FOR RUN {0} OF {1}:\n'.format(i + 1, runs))
+        res_file.write(cm_str+rp_str+ctp_str+du_str+cd_str)
         all_tp += tp
         all_fp += fp
         all_tn += tn
@@ -319,9 +353,14 @@ if __name__ == '__main__':
         avg_prec += tp / (tp + fp)
         avg_rec += tp / (tp + fn)
         avg_deanonymise_rate += len(found_users) / len(tracked_users)
-    print(all_tp, all_fp, all_tn, all_fn)
-    print(avg_prec / runs, avg_rec / runs)
-    print(avg_deanonymise_rate / runs)
+    fcm_str = 'TP: {0}, FP: {1}, TN: {2}, FN: {3}\n'.format(all_tp, all_fp, all_tn, all_fn)
+    avgrp_str = 'Average Recall: {0}, Average Precision: {1}\n'.format(avg_prec / runs, avg_rec / runs)
+    avgdr_str = 'Average deanonymised users out of tracked per run: {0}\n'.format(avg_deanonymise_rate / runs)
+    print('\nTOTAL RESULTS:')
+    print(fcm_str, avgrp_str, avgdr_str)
+    res_file.write('\nTotal Results:\n')
+    res_file.write(fcm_str+avgrp_str+avgdr_str)
+    res_file.close()
     # print(len(exit.in_traffic[m]))
 
 
