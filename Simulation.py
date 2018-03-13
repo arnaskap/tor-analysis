@@ -2,45 +2,12 @@
 
 import datetime
 
+from Setup import *
 from Relay import *
 from Client import *
 from Website import *
 from HiddenService import *
 from User import *
-
-
-GUARD_RELAYS = 80
-MIDDLE_RELAYS = 120
-EXIT_RELAYS = 60
-
-CLEARNET_SITES = 100
-HIDDEN_SERVICES = 30
-
-SITE_SIZE_AVG = 3000
-SITE_BW_AVG = 5000000
-USER_BW_AVG = 3000000
-RELAY_BW_AVG = 15000000
-
-USERS_NUM = 15000
-
-TIME_TO_RUN = 3000
-TOTAL_RUNS = 3
-CIRCUIT_TIME = 600
-
-TRACKED_GUARD_RELAYS = 3
-TRACKED_EXIT_RELAYS = 3
-
-TRACKED_HIDDEN_SERVICES = 1
-TRACKED_USERS = 250
-
-PREDICTED_SEND_TIME = 0.0016
-ERROR = 0.01
-
-regions = ['Asia', 'Australia', 'Europe', 'North America', 'South America']
-
-
-def get_region():
-    return regions[random.randint(0, len(regions)-1)]
 
 
 def get_intro_points(relays, ip_num):
@@ -150,7 +117,8 @@ if __name__ == '__main__':
     now = datetime.datetime.now()
     filename = 'results/{0}.res'.format(now)
     res_file = open(filename, 'w')
-    env_string = """GUARD_RELAYS = {0}
+    env_string =  \
+"""GUARD_RELAYS = {0}
 MIDDLE_RELAYS = {1}
 EXIT_RELAYS = {2}
 TRACKED_GUARD_RELAYS = {3}
@@ -164,10 +132,13 @@ SITE_BW_AVG = {10}
 USER_BW_AVG = {11}
 SITE_SIZE_AVG = {12}
 TOTAL_RUNS = {13}
-TIME_TO_RUN = {14}\n""".format(GUARD_RELAYS, MIDDLE_RELAYS, EXIT_RELAYS, TRACKED_GUARD_RELAYS,
+TIME_TO_RUN = {14}
+PREDICTED_SEND_TIME = {15}
+ERROR = {16}
+LATENCY_VARIATION = {17}\n""".format(GUARD_RELAYS, MIDDLE_RELAYS, EXIT_RELAYS, TRACKED_GUARD_RELAYS,
                                TRACKED_EXIT_RELAYS, CLEARNET_SITES, HIDDEN_SERVICES, TRACKED_USERS,
                                USERS_NUM, RELAY_BW_AVG, SITE_BW_AVG, USER_BW_AVG, SITE_SIZE_AVG,
-                               TOTAL_RUNS, TIME_TO_RUN)
+                               TOTAL_RUNS, TIME_TO_RUN, PREDICTED_SEND_TIME, ERROR, LATENCY_VARIATION)
 
     print(env_string)
     res_file.write(env_string)
@@ -195,7 +166,9 @@ TIME_TO_RUN = {14}\n""".format(GUARD_RELAYS, MIDDLE_RELAYS, EXIT_RELAYS, TRACKED
     all_tp, all_fp, all_tn, all_fn = 0, 0, 0, 0
     avg_rec, avg_prec = 0, 0
     avg_deanonymise_rate = 0
+    avg_site_wait, avg_hs_wait = 0, 0
     for i in range(runs):
+        total_site_wait, total_hs_wait, sites_visited, hs_visited = 0, 0, 0, 0
         relays, guards, middles, exits, \
         tracked_guards, tracked_exits = generate_relays(guard_num, middle_num, exit_num,
                                                         tracked_guards_num, tracked_exits_num,
@@ -219,6 +192,10 @@ TIME_TO_RUN = {14}\n""".format(GUARD_RELAYS, MIDDLE_RELAYS, EXIT_RELAYS, TRACKED
         for user in tracked_users:
             while user.client.time < t_t_r:
                 user.visit_next()
+            total_site_wait += user.client.site_wait_time
+            total_hs_wait += user.client.hs_wait_time
+            sites_visited += user.client.sites_visited
+            hs_visited += user.client.hs_visited
             # print(user.client.circuit_counter)
         print('GENERATED TRACKED USER TRAFFIC')
         while t_t_r > 0:
@@ -234,6 +211,10 @@ TIME_TO_RUN = {14}\n""".format(GUARD_RELAYS, MIDDLE_RELAYS, EXIT_RELAYS, TRACKED
                     user_start_time = user.client.time
                     while user.client.time < user_start_time + time_for_traffic:
                         user.visit_next()
+                    total_site_wait += user.client.site_wait_time
+                    total_hs_wait += user.client.hs_wait_time
+                    sites_visited += user.client.sites_visited
+                    hs_visited += user.client.hs_visited
 
             exit_users_num = users_num // len(exits)
             for e in tracked_exits:
@@ -245,6 +226,10 @@ TIME_TO_RUN = {14}\n""".format(GUARD_RELAYS, MIDDLE_RELAYS, EXIT_RELAYS, TRACKED
                     user_start_time = user.client.time
                     while user.client.time < user_start_time + time_for_traffic:
                         user.visit_next()
+                    total_site_wait += user.client.site_wait_time
+                    total_hs_wait += user.client.hs_wait_time
+                    sites_visited += user.client.sites_visited
+                    hs_visited += user.client.hs_visited
             print('GENERATED TRAFFIC FOR TRACKED EXITS AND GUARDS AT TIME {0}'.format(time))
 
             time += circuit_time
@@ -342,10 +327,13 @@ TIME_TO_RUN = {14}\n""".format(GUARD_RELAYS, MIDDLE_RELAYS, EXIT_RELAYS, TRACKED
         ctp_str = 'Packets matched by circuit type: {0}\n'.format(tp_by_circuit_type)
         du_str = 'Total deanonymised users - {0} of {1} tracked\n'.format(len(found_users), len(tracked_users))
         cd_str = 'Deanonymised circuits by type: {0}\n'.format(deanonymised_circuit_types)
-        print('RESULTS FOR RUN {0} OF {1}:'.format(i+1, runs))
-        print(cm_str+rp_str+ctp_str+du_str+cd_str)
-        res_file.write('RESULTS FOR RUN {0} OF {1}:\n'.format(i + 1, runs))
-        res_file.write(cm_str+rp_str+ctp_str+du_str+cd_str)
+        swt_str = 'Average wait time for websites: {0}\n'.format(total_site_wait / sites_visited)
+        hswt_str = 'Average wait time for hidden services: {0}\n'.format(total_hs_wait / hs_visited)
+        res_str = cm_str + rp_str + ctp_str + du_str + cd_str + swt_str + hswt_str
+        print('\nRESULTS FOR RUN {0} OF {1}:'.format(i+1, runs))
+        print(res_str)
+        res_file.write('\nRESULTS FOR RUN {0} OF {1}:\n'.format(i + 1, runs))
+        res_file.write(res_str)
         all_tp += tp
         all_fp += fp
         all_tn += tn
@@ -353,13 +341,18 @@ TIME_TO_RUN = {14}\n""".format(GUARD_RELAYS, MIDDLE_RELAYS, EXIT_RELAYS, TRACKED
         avg_prec += tp / (tp + fp)
         avg_rec += tp / (tp + fn)
         avg_deanonymise_rate += len(found_users) / len(tracked_users)
+        avg_site_wait += total_site_wait / sites_visited
+        avg_hs_wait += total_hs_wait / hs_visited
     fcm_str = 'TP: {0}, FP: {1}, TN: {2}, FN: {3}\n'.format(all_tp, all_fp, all_tn, all_fn)
-    avgrp_str = 'Average Recall: {0}, Average Precision: {1}\n'.format(avg_prec / runs, avg_rec / runs)
-    avgdr_str = 'Average deanonymised users out of tracked per run: {0}\n'.format(avg_deanonymise_rate / runs)
+    avgrp_str = 'Average Recall: {0}, Average Precision: {1}\n'.format(avg_rec / runs, avg_prec / runs)
+    avgdr_str = 'Average pct of deanonymised users out of tracked per run: {0}\n'.format(avg_deanonymise_rate / runs)
+    avgsw_str = 'Average wait time for user to visit website: {0}\n'.format(avg_site_wait)
+    avghsw_str = 'Average wait time for user to visit website: {0}\n'.format(avg_hs_wait)
+    res_str = fcm_str + avgrp_str + avgdr_str + avgsw_str + avghsw_str
     print('\nTOTAL RESULTS:')
-    print(fcm_str, avgrp_str, avgdr_str)
-    res_file.write('\nTotal Results:\n')
-    res_file.write(fcm_str+avgrp_str+avgdr_str)
+    print(res_str)
+    res_file.write('\nTOTAL RESULTS:\n')
+    res_file.write(res_str)
     res_file.close()
     # print(len(exit.in_traffic[m]))
 

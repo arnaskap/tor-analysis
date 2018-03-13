@@ -1,15 +1,18 @@
 # Packet class that contains information necessary for packet
 # processing and traffic logging
 
-# Tor packets typically have a size of 586 bytes
+# Tor packets typically have a size of 586 bytes (512 Tor cell wrapped
+# with IP and TCP info)
 PACKET_SIZE=586
 
 
 # Possible packet types:
-# IP -
+# Data
+# IP
 # RP-C
 # RP-confirm
 # RP-data
+# fill in later
 
 class Packet:
 

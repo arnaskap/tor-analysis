@@ -1,8 +1,7 @@
 # Superclass representing network nodes that provides packet
 # sending/receiving and traffic logging
 
-import numpy as np
-from utils import *
+from Setup import *
 
 # Time it takes for node to process received packets (read headers,
 # decrypt layer etc.)
@@ -65,9 +64,12 @@ class Node:
         if self.tracked and destination.id not in self.out_traffic:
                 self.out_traffic[destination.id] = []
         for i in range(len(packets)):
+            # Get random delay for every packet as defence measure
+            delay = random.uniform(0, DELAY_CAP)
             packet = packets[i]
             # packet can only be sent once previous packet has been sent
             time_of_send = max(packet.creation_time+packet.lived, prev_send_time)
+            time_of_send += delay
             if self.tracked:
                 # If current node is not originator of packet, change
                 # in traffic from previous sender of packet to

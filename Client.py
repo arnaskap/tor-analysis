@@ -33,6 +33,13 @@ class Client(CircuitUser):
         self.hs_user_ids = {}
         # Global time
         self.time = time
+        # Time when request for site was sent, used for counting website wait time
+        self.req_sent_at = None
+        # Website wait time statistics used to calculate content serving speed on network
+        self.site_wait_time = 0
+        self.sites_visited = 0
+        self.hs_wait_time = 0
+        self.hs_visited = 0
 
     # Get a random relay as the rendezvous point to be used
     def _get_new_rp(self):
@@ -86,12 +93,21 @@ class Client(CircuitUser):
     def _process_packet(self, sender, packet, circuit=None):
         in_content = packet.content.split(' ')
         packet_type = in_content[0]
+        if self.req_sent_at and ('data' in packet_type or 'DATA' in packet_type):
+            if packet_type == 'DATA':
+                self.site_wait_time += packet.creation_time + packet.lived - self.req_sent_at
+                self.sites_visited += 1
+            else:
+                self.hs_wait_time += packet.creation_time + packet.lived - self.req_sent_at
+                self.hs_visited += 1
+            self.req_sent_at = None
         if packet_type.startswith('RP-confirm') or \
            packet_type.startswith('RP-data'):
             self.time = packet.creation_time + packet.lived
 
     # Emulates packet sending for visiting a specified clearnet website
     def visit_clearnet_site(self, site):
+        self.req_sent_at = self.time
         # Create new general circuit if required
         if not self.general_circuit or not self.general_circuit.is_running:
             self._establish_general_circuit()
@@ -104,6 +120,7 @@ class Client(CircuitUser):
     # Emulates process of establishing connection to hidden service
     # and making requests / receiving responses from it
     def visit_hidden_service(self, hs_address):
+        self.req_sent_at = self.time
         if not hs_address in self.hs_user_ids:
             hs_uid = uuid.uuid4()
             self.hs_user_ids[hs_address] = hs_uid
