@@ -322,6 +322,7 @@ LATENCY_VARIATION = {17}\n""".format(GUARD_RELAYS, MIDDLE_RELAYS, EXIT_RELAYS, T
                                 else:
                                     tn += 1
                                 i_e += 1
+        totp_str = 'Total packets classified for run analysis: {0}\n'.format(tp+fp+tn+fn)
         cm_str = 'TP: {0}, FP: {1}, TN: {2}, FN: {3}\n'.format(tp, fp, tn, fn)
         rp_str = 'Recall: {0}, Precision: {1}\n'.format(tp/(tp+fn), tp/(tp+fp))
         ctp_str = 'Packets matched by circuit type: {0}\n'.format(tp_by_circuit_type)
@@ -329,7 +330,7 @@ LATENCY_VARIATION = {17}\n""".format(GUARD_RELAYS, MIDDLE_RELAYS, EXIT_RELAYS, T
         cd_str = 'Deanonymised circuits by type: {0}\n'.format(deanonymised_circuit_types)
         swt_str = 'Average wait time for websites: {0}\n'.format(total_site_wait / sites_visited)
         hswt_str = 'Average wait time for hidden services: {0}\n'.format(total_hs_wait / hs_visited)
-        res_str = cm_str + rp_str + ctp_str + du_str + cd_str + swt_str + hswt_str
+        res_str = totp_str + cm_str + rp_str + ctp_str + du_str + cd_str + swt_str + hswt_str
         print('\nRESULTS FOR RUN {0} OF {1}:'.format(i+1, runs))
         print(res_str)
         res_file.write('\nRESULTS FOR RUN {0} OF {1}:\n'.format(i + 1, runs))
@@ -343,12 +344,13 @@ LATENCY_VARIATION = {17}\n""".format(GUARD_RELAYS, MIDDLE_RELAYS, EXIT_RELAYS, T
         avg_deanonymise_rate += len(found_users) / len(tracked_users)
         avg_site_wait += total_site_wait / sites_visited
         avg_hs_wait += total_hs_wait / hs_visited
+    totp_str = 'Total packets classified for analysis: {0}\n'.format(all_tp+all_fp+all_tn+all_fn)
     fcm_str = 'TP: {0}, FP: {1}, TN: {2}, FN: {3}\n'.format(all_tp, all_fp, all_tn, all_fn)
     avgrp_str = 'Average Recall: {0}, Average Precision: {1}\n'.format(avg_rec / runs, avg_prec / runs)
     avgdr_str = 'Average pct of deanonymised users out of tracked per run: {0}\n'.format(avg_deanonymise_rate / runs)
     avgsw_str = 'Average wait time for user to visit website: {0}\n'.format(avg_site_wait)
     avghsw_str = 'Average wait time for user to visit website: {0}\n'.format(avg_hs_wait)
-    res_str = fcm_str + avgrp_str + avgdr_str + avgsw_str + avghsw_str
+    res_str = totp_str + fcm_str + avgrp_str + avgdr_str + avgsw_str + avghsw_str
     print('\nTOTAL RESULTS:')
     print(res_str)
     res_file.write('\nTOTAL RESULTS:\n')
