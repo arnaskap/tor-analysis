@@ -36,7 +36,7 @@ class CircuitUser(Node):
             if circuit_middle in circuit_middles or exclude:
                 while circuit_middle in circuit_middles or circuit_middle in exclude:
                     circuit_middle = self.pos_middles[random.randint(0, len(self.pos_middles) - 1)]
-                circuit_middles.append(circuit_middle)
+            circuit_middles.append(circuit_middle)
         circuit_exit = self.pos_exits[random.randint(0, len(self.pos_exits) - 1)]
         if exclude:
             while circuit_exit in exclude:

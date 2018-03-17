@@ -63,9 +63,9 @@ def generate_sites(sites_num, size_avg, bw_avg):
     sites = []
     for i in range(sites_num):
         id = 'ws{0}'.format(str(i))
-        bw = abs(int(np.random.normal(bw_avg, bw_avg / 10)))
+        bw = abs(int(np.random.normal(bw_avg, bw_avg / 2)))
         region = get_region()
-        size = abs(int(np.random.normal(size_avg, size_avg/10)))
+        size = max(int(np.random.normal(size_avg, size_avg / 2)), 1) # ensure size is at least 1
         sites.append(Website(id, bw, region, size))
     return sites
 
@@ -77,12 +77,12 @@ def generate_hidden_services(relays, guards, middles, exits, hs_num,
     relay_list = list(relays.values())
     for i in range(hs_num):
         id = 'hs{0}'.format(str(i))
-        bw = abs(int(np.random.normal(bw_avg, bw_avg / 10)))
+        bw = abs(int(np.random.normal(bw_avg, bw_avg / 2)))
         region = get_region()
         pos_guards = guards
         if low_guards_no:
             pos_guards = [guards[i] for i in random.sample(range(len(guards)), 3)]
-        size = abs(int(np.random.normal(size_avg, size_avg/10)))
+        size = max(int(np.random.normal(size_avg, size_avg / 2)), 1) # ensure size is at least 1
         ips = get_intro_points(relay_list, 1)
         hs = HiddenService(id, time, bw, region, size, relays, pos_guards, middles, exits, ips)
         addresses_to_ips.update(hs.ips)
@@ -167,6 +167,10 @@ LATENCY_VARIATION = {17}\n""".format(GUARD_RELAYS, MIDDLE_RELAYS, EXIT_RELAYS, T
     avg_rec, avg_prec = 0, 0
     avg_deanonymise_rate = 0
     avg_site_wait, avg_hs_wait = 0, 0
+    total_type_count = [0]*6
+    total_deanonymised_by_type = [0]*6
+    total_tp_by_circuit_type = {'General': 0, 'C-IP': 0, 'C-RP': 0}
+    total_deanonymised_circuit_types = {'General': 0, 'C-IP': 0, 'C-RP': 0}
     for i in range(runs):
         total_site_wait, total_hs_wait, sites_visited, hs_visited = 0, 0, 0, 0
         relays, guards, middles, exits, \
@@ -189,9 +193,14 @@ LATENCY_VARIATION = {17}\n""".format(GUARD_RELAYS, MIDDLE_RELAYS, EXIT_RELAYS, T
                                        tracked_users_num, user_bw, sites,
                                        addresses_to_ips, time, low_guards_no=True)
 
+        deanonymised_by_type = [0]*6
+        type_count = [0]*6
+        user_to_type = {}
         for user in tracked_users:
+            type_count[user.type-1] += 1
             while user.client.time < t_t_r:
                 user.visit_next()
+            user_to_type[user.client.id] = user.type
             total_site_wait += user.client.site_wait_time
             total_hs_wait += user.client.hs_wait_time
             sites_visited += user.client.sites_visited
@@ -258,12 +267,10 @@ LATENCY_VARIATION = {17}\n""".format(GUARD_RELAYS, MIDDLE_RELAYS, EXIT_RELAYS, T
                                                                 packet_circuit_id,
                                                                 packet_circuit_type,
                                                                 ))
-                    # print(u, tr_user_guard_traffic[u].keys())
         for exit in tracked_exits:
             for m in rel_middles:
                 if m in exit.in_traffic:
                     exit.in_traffic[m].sort(key=lambda x: x[0])
-                    # print('!!!!!!!!!', exit.in_traffic[m])
         tp, tn, fp, fn = 0, 0, 0, 0
         tp_by_circuit_type = {
             'General': 0,
@@ -280,7 +287,56 @@ LATENCY_VARIATION = {17}\n""".format(GUARD_RELAYS, MIDDLE_RELAYS, EXIT_RELAYS, T
         for u in tr_user_guard_traffic:
             for m in tr_user_guard_traffic[u]:
                 for exit in tracked_exits:
-                    if m in exit.in_traffic:
+                    if CIRCUIT_MIDDLE_NO > 2:
+                        for m_o in exit.in_traffic:
+                            if m_o.startswith('m') and m_o != m:
+                                if CIRCUIT_MIDDLE_NO == 2:
+                                    latency_1 = get_latency(relays[m].continent, relays[m_o].continent)
+                                    latency_2 = get_latency(relays[m_o].continent, relays[exit.id].continent)
+                                    dif = latency_1 + latency_2 + PREDICTED_SEND_TIME
+                                    error = ERROR
+                                else:
+                                    dif = PREDICTED_SEND_TIME + 0.32
+                                    error = ERROR + 0.32*CIRCUIT_MIDDLE_NO
+                                i_m, i_e = 0, 0
+                                cor_found, false_found = 0, 0
+                                t_to_mid = tr_user_guard_traffic[u][m]
+                                t_in_ex = exit.in_traffic[m_o]
+                                # print(dif, '\n', t_to_mid, '\n', t_in_ex)
+                                # print(' ')
+                                while i_m < len(t_to_mid) and i_e < len(t_in_ex):
+                                    m_time = t_to_mid[i_m][0]
+                                    m_circuit = t_to_mid[i_m][1]
+                                    m_circuit_type = t_to_mid[i_m][2]
+                                    e_time = t_in_ex[i_e][0]
+                                    e_originator = t_in_ex[i_e][1]
+                                    e_circuit = t_in_ex[i_e][2]
+                                    if len(t_in_ex[i_e]) > 4:
+                                        e_originator = t_in_ex[i_e][3]
+                                        e_circuit = t_in_ex[i_e][4]
+                                    res = e_time - m_time - dif
+                                    if res <= error and res >= -1 * error:
+                                        if m_circuit == e_circuit:
+                                            if e_originator not in found_users and e_originator.startswith('c'):
+                                                found_users.append(e_originator)
+                                            if m_circuit not in deanonymised_circuits and e_originator.startswith('c'):
+                                                deanonymised_circuits.append(m_circuit)
+                                                deanonymised_circuit_types[m_circuit_type] += 1
+                                            tp += 1
+                                            tp_by_circuit_type[m_circuit_type] += 1
+                                        else:
+                                            fp += 1
+                                        i_m += 1
+                                        i_e += 1
+                                    elif res > error:
+                                        i_m += 1
+                                    else:
+                                        if m_circuit == e_circuit:
+                                            fn += 1
+                                        else:
+                                            tn += 1
+                                        i_e += 1
+                    elif m in exit.in_traffic:
                         latency = get_latency(relays[m].continent, relays[exit.id].continent)
                         dif = latency + PREDICTED_SEND_TIME
                         error = ERROR
@@ -297,11 +353,15 @@ LATENCY_VARIATION = {17}\n""".format(GUARD_RELAYS, MIDDLE_RELAYS, EXIT_RELAYS, T
                             e_time = t_in_ex[i_e][0]
                             e_originator = t_in_ex[i_e][1]
                             e_circuit = t_in_ex[i_e][2]
+                            e_circuit_type = t_in_ex[i_e][3]
                             if len(t_in_ex[i_e]) > 4:
                                 e_originator = t_in_ex[i_e][3]
                                 e_circuit = t_in_ex[i_e][4]
+                                e_circuit_type = t_in_ex[i_e][5]
                             res = e_time - m_time - dif
                             if res <= error and res >= -1 * error:
+                                # if m_circuit_type == 'General':
+                                #     print('{0} {1} {2} {3}'.format(e_time, m_time, m_circuit, e_circuit))
                                 if m_circuit == e_circuit:
                                     if e_originator not in found_users:
                                         found_users.append(e_originator)
@@ -322,35 +382,58 @@ LATENCY_VARIATION = {17}\n""".format(GUARD_RELAYS, MIDDLE_RELAYS, EXIT_RELAYS, T
                                 else:
                                     tn += 1
                                 i_e += 1
+        for user in found_users:
+            deanonymised_by_type[user_to_type[user]-1] += 1
+        recall = 0 if tp + fn == 0 else (tp / (tp + fn))
+        precision = 0 if tp + fp == 0 else (tp / (tp + fp))
         totp_str = 'Total packets classified for run analysis: {0}\n'.format(tp+fp+tn+fn)
         cm_str = 'TP: {0}, FP: {1}, TN: {2}, FN: {3}\n'.format(tp, fp, tn, fn)
-        rp_str = 'Recall: {0}, Precision: {1}\n'.format(tp/(tp+fn), tp/(tp+fp))
+        rp_str = 'Recall: {0}, Precision: {1}\n'.format(recall, precision)
         ctp_str = 'Packets matched by circuit type: {0}\n'.format(tp_by_circuit_type)
         du_str = 'Total deanonymised users - {0} of {1} tracked\n'.format(len(found_users), len(tracked_users))
         cd_str = 'Deanonymised circuits by type: {0}\n'.format(deanonymised_circuit_types)
         swt_str = 'Average wait time for websites: {0}\n'.format(total_site_wait / sites_visited)
         hswt_str = 'Average wait time for hidden services: {0}\n'.format(total_hs_wait / hs_visited)
-        res_str = totp_str + cm_str + rp_str + ctp_str + du_str + cd_str + swt_str + hswt_str
+        dt_str = 'Deanonymised users by type: '
+        for j in range(len(type_count)):
+            dt_str += 'Type {0}: {1}/{2}. '.format(j+1, deanonymised_by_type[j], type_count[j])
+        dt_str += '\n'
+        res_str = totp_str + cm_str + rp_str + ctp_str + du_str + cd_str + swt_str + hswt_str + dt_str
         print('\nRESULTS FOR RUN {0} OF {1}:'.format(i+1, runs))
         print(res_str)
         res_file.write('\nRESULTS FOR RUN {0} OF {1}:\n'.format(i + 1, runs))
         res_file.write(res_str)
+
         all_tp += tp
         all_fp += fp
         all_tn += tn
         all_fn += fn
-        avg_prec += tp / (tp + fp)
-        avg_rec += tp / (tp + fn)
+        avg_prec += precision
+        avg_rec += recall
         avg_deanonymise_rate += len(found_users) / len(tracked_users)
         avg_site_wait += total_site_wait / sites_visited
         avg_hs_wait += total_hs_wait / hs_visited
+        for j in range(len(type_count)):
+            total_type_count[j] += type_count[j]
+            total_deanonymised_by_type[j] += deanonymised_by_type[j]
+        for j in tp_by_circuit_type:
+            total_tp_by_circuit_type[j] += tp_by_circuit_type[j]
+        for j in deanonymised_circuit_types:
+            total_deanonymised_circuit_types[j] += deanonymised_circuit_types[j]
+
     totp_str = 'Total packets classified for analysis: {0}\n'.format(all_tp+all_fp+all_tn+all_fn)
     fcm_str = 'TP: {0}, FP: {1}, TN: {2}, FN: {3}\n'.format(all_tp, all_fp, all_tn, all_fn)
     avgrp_str = 'Average Recall: {0}, Average Precision: {1}\n'.format(avg_rec / runs, avg_prec / runs)
     avgdr_str = 'Average pct of deanonymised users out of tracked per run: {0}\n'.format(avg_deanonymise_rate / runs)
-    avgsw_str = 'Average wait time for user to visit website: {0}\n'.format(avg_site_wait)
-    avghsw_str = 'Average wait time for user to visit website: {0}\n'.format(avg_hs_wait)
-    res_str = totp_str + fcm_str + avgrp_str + avgdr_str + avgsw_str + avghsw_str
+    avgsw_str = 'Average wait time for user to visit website: {0}\n'.format(avg_site_wait / runs)
+    avghsw_str = 'Average wait time for user to visit website: {0}\n'.format(avg_hs_wait / runs)
+    tcd_str = 'Deanonymised circuits by type: {0}\n'.format(total_deanonymised_circuit_types)
+    tctp_str = 'Packets matched by circuit type: {0}\n'.format(total_tp_by_circuit_type)
+    tdt_str = 'Total deanonymised users by type: '
+    for i in range(len(total_type_count)):
+        tdt_str += 'Type {0}: {1}/{2}. '.format(i + 1, total_deanonymised_by_type[i], total_type_count[i])
+    tdt_str += '\n'
+    res_str = totp_str + fcm_str + avgrp_str + avgdr_str + avgsw_str + avghsw_str + tcd_str + tctp_str + tdt_str
     print('\nTOTAL RESULTS:')
     print(res_str)
     res_file.write('\nTOTAL RESULTS:\n')
