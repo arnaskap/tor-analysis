@@ -173,9 +173,9 @@ LATENCY_VARIATION = {17}\n""".format(GUARD_RELAYS, MIDDLE_RELAYS, EXIT_RELAYS, T
     total_type_count = [0]*6
     total_deanonymised_by_type = [0]*6
     total_tp_by_circuit_type = {'General': 0, 'C-IP': 0, 'C-RP': 0}
-
-    # circuit fingerprinting metrics
     total_deanonymised_circuit_types = {'General': 0, 'C-IP': 0, 'C-RP': 0}
+
+    # cfp metrics
     all_c_types = ['General', 'C-IP', 'C-RP', 'HS-IP', 'HS-RP']
     cfp_class_count = {}
     for type1 in all_c_types:
@@ -216,7 +216,6 @@ LATENCY_VARIATION = {17}\n""".format(GUARD_RELAYS, MIDDLE_RELAYS, EXIT_RELAYS, T
             total_hs_wait += user.client.hs_wait_time
             sites_visited += user.client.sites_visited
             hs_visited += user.client.hs_visited
-            # print(user.client.circuit_counter)
         print('GENERATED TRACKED USER TRAFFIC')
         while t_t_r > 0:
             time_for_traffic = min(t_t_r, circuit_time)
@@ -260,36 +259,39 @@ LATENCY_VARIATION = {17}\n""".format(GUARD_RELAYS, MIDDLE_RELAYS, EXIT_RELAYS, T
         for u in tracked_user_ids:
             tr_user_guard_traffic[u] = {}
         max_rp = 0
-        gen_or_c_rp = []
+        gen_or_c_rp = {}
+        found_hs_circuits = {}
+        found_sent_hs_packets = {}
+        for hs in tracked_hs:
+            found_hs_circuits[hs] = 0
+            found_sent_hs_packets[hs] = 0
         for g in tracked_guards:
+            gen_or_c_rp[g] = {}
             for u in g.circuit_traffic:
-                # print(g.circuit_sequence[u])
-                # print(g.circuit_packet_count[u])
+                gen_or_c_rp[g][u] = []
                 for circ in g.circuit_traffic[u]:
                     circ_type = g.circuit_traffic[u][circ][0][3]
                     c_seq = g.circuit_sequence[u][circ]
                     c_pc = g.circuit_packet_count[u][circ]
+                    c_type_guess = None
                     if c_pc[0] == c_pc[1]:
-                        print('C-IP', circ_type, c_pc)
+                        c_type_guess = 'C-IP'
                     elif c_pc[0] > 3 and c_pc[1] == 3:
-                        print('HS-IP', circ_type, c_pc)
+                        c_type_guess = 'HS-IP'
                     elif c_pc[1] > c_pc[0]:
                         if c_pc[0] + c_pc[1] > max_rp:
                             max_rp = c_pc[0] + c_pc[1]
-                        print('HS-RP', circ_type, c_pc, max_rp)
+                        c_type_guess = 'HS-RP'
+                    if c_type_guess:
+                        cfp_class_count[circ_type][c_type_guess] += 1
+                        if u in tracked_hs and c_type_guess == 'HS_RP' and circ_type == 'HS_RP':
+                            found_hs_circuits[u] += 1
+                            found_sent_hs_packets[u] += c_pc[1]
                     else:
-                        gen_or_c_rp.append(circ)
-                # for circ in gen_or_c_rp:
-                #     c_pc = g.circuit_packet_count[u][circ]
-                #     circ_type = g.circuit_traffic[u][circ][0][3]
-                #     if c_pc[0] + c_pc[1] >= max_rp:
-                #         print('General', circ_type, c_pc, max_rp)
-                #     else:
-                #         print('C-RP', circ_type, c_pc)
+                        gen_or_c_rp[g][u].append(circ)
             for u in tracked_user_ids:
                 if u in g.in_traffic:
                     tracked_user_in = g.in_traffic[u]
-                    # print('{0}\n{1}\n{2}\n'.format(g.circuit_traffic[u], g.circuit_sequence[u], g.circuit_packet_count[u]))
                     for p in tracked_user_in:
                         if len(p) == 6:
                             m = p[2]
@@ -305,6 +307,19 @@ LATENCY_VARIATION = {17}\n""".format(GUARD_RELAYS, MIDDLE_RELAYS, EXIT_RELAYS, T
                                                                 packet_circuit_id,
                                                                 packet_circuit_type,
                                                                 ))
+        for g in gen_or_c_rp:
+            for u in gen_or_c_rp[g]:
+                for circ in gen_or_c_rp[g][u]:
+                    circ_type = g.circuit_traffic[u][circ][0][3]
+                    c_seq = g.circuit_sequence[u][circ]
+                    c_pc = g.circuit_packet_count[u][circ]
+                    c_type_guess = None
+                    if c_pc[0] + c_pc[1] > max_rp:
+                        c_type_guess = 'General'
+                    else:
+                        c_type_guess = 'C-RP'
+                    cfp_class_count[circ_type][c_type_guess] += 1
+
         for exit in tracked_exits:
             if CIRCUIT_MIDDLE_NO > 1:
                 for m in exit.in_traffic:
@@ -440,8 +455,35 @@ LATENCY_VARIATION = {17}\n""".format(GUARD_RELAYS, MIDDLE_RELAYS, EXIT_RELAYS, T
         for j in range(len(type_count)):
             dt_str += 'Type {0}: {1}/{2}. '.format(j+1, deanonymised_by_type[j], type_count[j])
         dt_str += '\n'
-        res_str = totp_str + cm_str + rp_str + ctp_str + du_str + cd_str + swt_str + hswt_str + dt_str
+        cfp_acc_str = 'Circuit classification accuracy:\n'
+        for t in cfp_class_count:
+            total = 0
+            cc = cfp_class_count[t]
+            for t2 in cc:
+                total += cc[t2]
+            cfp_acc_str += '    General: {0}%, C-RP: {1}%, C-IP: {2}%, HS-RP: {3}%, HS-IP: {4}%\n'.format(cc['General']*100/total,
+                                                                                                          cc['C-RP']*100/total,
+                                                                                                          cc['C-IP']*100/total,
+                                                                                                          cc['HS-RP']*100/total,
+                                                                                                          cc['HS-IP']*100/total)
+        tracked_hs_found = 0
+        total_packets_found = 0
+        total_circuits_found = 0
+        for t in found_hs_circuits:
+            if found_hs_circuits[t] > 0:
+                total_packets_found += found_sent_hs_packets[t]
+                total_circuits_found += found_hs_circuits[t]
+                tracked_hs_found += 1
+        avg_circs = 0 if tracked_hs_found == 0 else total_circuits_found/tracked_hs_found
+        avg_packs = 0 if tracked_hs_found == 0 else total_packets_found/tracked_hs_found
+        hs_cfp_str = 'Tracked hidden services that had at least one HS-RP circuit on owned guard relays: {0}\n'.format(tracked_hs_found)
+        ac_cfp_str = 'Average circuits correctly classified per found tracked HS: {0}\n'.format(avg_circs)
+        ap_cfp_str = 'Average packets found on correctly classified tracked hidden services: {0}\n'.format(avg_packs)
+        res_str = totp_str + cm_str + rp_str + ctp_str + du_str + cd_str +\
+                  swt_str + hswt_str + dt_str + cfp_acc_str + hs_cfp_str +\
+                  ac_cfp_str + ap_cfp_str
         print('\nRESULTS FOR RUN {0} OF {1}:'.format(i+1, runs))
+        print(cfp_class_count)
         print(res_str)
         res_file.write('\nRESULTS FOR RUN {0} OF {1}:\n'.format(i + 1, runs))
         res_file.write(res_str)
