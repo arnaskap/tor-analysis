@@ -28,13 +28,13 @@ TRACKED_HIDDEN_SERVICES = 1
 TRACKED_USERS = 40
 
 PREDICTED_SEND_TIME = 0.0016
-ERROR = 0.01
+ERROR = 0.03
 
 LATENCY_VARIATION = 0.015
 
 # Correlation attack defense measures
 CIRCUIT_MIDDLE_NO = 1
-DELAY_CAP = 0
+DELAY_CAP = 2
 
 regions = ['Asia', 'Australia', 'Europe', 'North America', 'South America']
 

@@ -268,9 +268,13 @@ LATENCY_VARIATION = {17}\n""".format(GUARD_RELAYS, MIDDLE_RELAYS, EXIT_RELAYS, T
                                                                 packet_circuit_type,
                                                                 ))
         for exit in tracked_exits:
-            for m in rel_middles:
-                if m in exit.in_traffic:
+            if CIRCUIT_MIDDLE_NO > 1:
+                for m in exit.in_traffic:
                     exit.in_traffic[m].sort(key=lambda x: x[0])
+            else:
+                for m in rel_middles:
+                    if m in exit.in_traffic:
+                        exit.in_traffic[m].sort(key=lambda x: x[0])
         tp, tn, fp, fn = 0, 0, 0, 0
         tp_by_circuit_type = {
             'General': 0,
@@ -287,13 +291,13 @@ LATENCY_VARIATION = {17}\n""".format(GUARD_RELAYS, MIDDLE_RELAYS, EXIT_RELAYS, T
         for u in tr_user_guard_traffic:
             for m in tr_user_guard_traffic[u]:
                 for exit in tracked_exits:
-                    if CIRCUIT_MIDDLE_NO > 2:
+                    if CIRCUIT_MIDDLE_NO > 1:
                         for m_o in exit.in_traffic:
                             if m_o.startswith('m') and m_o != m:
                                 if CIRCUIT_MIDDLE_NO == 2:
                                     latency_1 = get_latency(relays[m].continent, relays[m_o].continent)
                                     latency_2 = get_latency(relays[m_o].continent, relays[exit.id].continent)
-                                    dif = latency_1 + latency_2 + PREDICTED_SEND_TIME
+                                    dif = latency_1 + latency_2 + PREDICTED_SEND_TIME + 0.001
                                     error = ERROR
                                 else:
                                     dif = PREDICTED_SEND_TIME + 0.32
@@ -339,7 +343,7 @@ LATENCY_VARIATION = {17}\n""".format(GUARD_RELAYS, MIDDLE_RELAYS, EXIT_RELAYS, T
                     elif m in exit.in_traffic:
                         latency = get_latency(relays[m].continent, relays[exit.id].continent)
                         dif = latency + PREDICTED_SEND_TIME
-                        error = ERROR
+                        error = ERROR + DELAY_CAP
                         i_m, i_e = 0, 0
                         cor_found, false_found = 0, 0
                         t_to_mid = tr_user_guard_traffic[u][m]
@@ -403,6 +407,7 @@ LATENCY_VARIATION = {17}\n""".format(GUARD_RELAYS, MIDDLE_RELAYS, EXIT_RELAYS, T
         print(res_str)
         res_file.write('\nRESULTS FOR RUN {0} OF {1}:\n'.format(i + 1, runs))
         res_file.write(res_str)
+        res_file.flush()
 
         all_tp += tp
         all_fp += fp

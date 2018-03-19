@@ -43,7 +43,7 @@ class CircuitUser(Node):
                 circuit_exit = self.pos_exits[random.randint(0, len(self.pos_exits) - 1)]
         return [circuit_guard] +  circuit_middles + [circuit_exit]
 
-    def _get_new_circuit(self, type='General', time=None, exclude=None):
+    def _get_new_circuit(self, type='General', time=None, exclude=[]):
         circuit_id = 'circ-{0}-{1}'.format(self.id, self.circuit_counter)
         self.circuit_counter += 1
         if not time:

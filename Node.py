@@ -26,6 +26,10 @@ class Node:
         # from this node
         self.in_traffic = {}
 
+        self.circuit_traffic = {}
+        self.circuit_sequence = {}
+        self.circuit_packet_count = {}
+
     # Receive a packet
     def receive_packet(self, sender, packet, circuit=None, as_endpoint=False):
         # Set previous node of packet to be the sender
