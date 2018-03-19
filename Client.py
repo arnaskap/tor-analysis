@@ -70,7 +70,7 @@ class Client(CircuitUser):
         ip = self.ips[hs_address]
         user_id = self.hs_user_ids[hs_address]
         out_content = 'IP {0} {1} {2}'.format(hs_address, rp_id, user_id)
-        packet = Packet(self.id, self.time, content=out_content)
+        packet = Packet(self.id, self.time, content=out_content, to_mm=True)
         self.c_ip_circuits[hs_address].send_packets([packet], ip)
 
     # Send first packet to RP through established C-RP circuit,
@@ -78,7 +78,7 @@ class Client(CircuitUser):
     def _nominate_rp(self, hs_address, rp):
         user_id = self.hs_user_ids[hs_address]
         out_content = 'RP-C {0} {1}'.format(hs_address, user_id)
-        rp_packet = Packet(self.id, self.time, content=out_content)
+        rp_packet = Packet(self.id, self.time, content=out_content, to_mm=True)
         self.c_rp_circuits[hs_address].send_packets([rp_packet], rp)
         self.time += rp_packet.lived
 
@@ -133,5 +133,5 @@ class Client(CircuitUser):
         c_rp_circuit = self.c_rp_circuits[hs_address]
         rp = self.rps[hs_address]
         out_content = 'RP-GET {0} {1}'.format(hs_address, user_id)
-        packet = Packet(self.id, self.time, content=out_content)
+        packet = Packet(self.id, self.time, content=out_content, to_mm=True)
         c_rp_circuit.send_packets([packet], rp)

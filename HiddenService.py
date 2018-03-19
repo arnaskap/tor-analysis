@@ -42,8 +42,8 @@ class HiddenService(CircuitUser):
         packets = []
         out_content = 'RP-data {0} {1}'.format(hs_address, user_id)
         for i in range(int(math.ceil(self.size / PACKET_SIZE))-1):
-            packets.append(Packet(self.id, time, content=out_content))
-        out_content = 'RP-finish-data {0} {1}'.format(hs_address, user_id)
+            packets.append(Packet(self.id, time, content=out_content, to_mm=True))
+        out_content = 'RP-finish-data {0} {1}'.format(hs_address, user_id, to_mm=True)
         packets.append(Packet(self.id, time, content=out_content))
         return packets
 
@@ -83,7 +83,7 @@ class HiddenService(CircuitUser):
             self._setup_rp_circuit(rp_relay, hs_address, user_id, curtime)
             curtime += self.hs_rp_circuits[(hs_address, user_id)].lived
             out_content = 'RP-HS {0} {1}'.format(hs_address, user_id)
-            packet = Packet(self.id, curtime, content=out_content)
+            packet = Packet(self.id, curtime, content=out_content, to_mm=True)
             self.hs_rp_circuits[(hs_address, user_id)].send_packets([packet], rp_relay)
         elif packet_type.startswith('RP-GET'):
             hs_address = in_content[1]

@@ -16,7 +16,7 @@ PACKET_SIZE=586
 
 class Packet:
 
-    def __init__(self, user_id, creation_time, content='DATA'):
+    def __init__(self, user_id, creation_time, content='DATA', to_mm=False):
         # original sender of packet
         self.original_from = user_id
         # previous sender of packet
@@ -24,6 +24,7 @@ class Packet:
         self.circuit = None
         self.circuit_type = None
         self.creation_time = creation_time
+        self.to_mm = to_mm
         self.lived = 0
         self.content = content
         self.size = PACKET_SIZE

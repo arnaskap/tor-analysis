@@ -26,10 +26,15 @@ class Relay(Node):
         curtime = packet.creation_time + packet.lived
         in_content = packet.content.split(' ')
         packet_type = in_content[0]
+
         if packet_type  == 'IP':
             hs_address = in_content[1]
             rp_id = in_content[2]
             user_id = in_content[3]
+            out_content = 'IP-confirm {0} {1}'.format(rp_id, hs_address)
+            response_packet = Packet(self.id, curtime, content=out_content)
+            circuit.send_packets_to_startpoint([response_packet], self)
+            curtime = response_packet.creation_time + response_packet.lived
             if hs_address in self.hs_ip_circuits:
                 hs_ip_circuit = self.hs_ip_circuits[hs_address]
                 out_content = 'RP-establish {0} {1} {2}'.format(rp_id, user_id, hs_address)

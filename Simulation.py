@@ -71,9 +71,9 @@ def generate_sites(sites_num, size_avg, bw_avg):
 
 
 def generate_hidden_services(relays, guards, middles, exits, hs_num,
-                             size_avg, bw_avg, time, low_guards_no=False):
+                             size_avg, bw_avg, time, tracked_no, low_guards_no=False):
     addresses_to_ips = {}
-    hs_list = []
+    tracked_hs_list = []
     relay_list = list(relays.values())
     for i in range(hs_num):
         id = 'hs{0}'.format(str(i))
@@ -86,8 +86,9 @@ def generate_hidden_services(relays, guards, middles, exits, hs_num,
         ips = get_intro_points(relay_list, 1)
         hs = HiddenService(id, time, bw, region, size, relays, pos_guards, middles, exits, ips)
         addresses_to_ips.update(hs.ips)
-        hs_list.append(hs)
-    return addresses_to_ips, hs_list
+        if len(tracked_hs_list) < tracked_no:
+            tracked_hs_list.append(hs.id)
+    return addresses_to_ips, tracked_hs_list
 
 
 USER_ID_COUNTER = 0
@@ -150,6 +151,7 @@ LATENCY_VARIATION = {17}\n""".format(GUARD_RELAYS, MIDDLE_RELAYS, EXIT_RELAYS, T
     tracked_exits_num = TRACKED_EXIT_RELAYS
     sites_num = CLEARNET_SITES
     hs_num = HIDDEN_SERVICES
+    tracked_hs_num = TRACKED_HIDDEN_SERVICES
     tracked_users_num = TRACKED_USERS
     users_num = USERS_NUM
     circuit_time = CIRCUIT_TIME
@@ -162,6 +164,7 @@ LATENCY_VARIATION = {17}\n""".format(GUARD_RELAYS, MIDDLE_RELAYS, EXIT_RELAYS, T
 
     runs = TOTAL_RUNS
 
+    # end-to-end correlation metrics
     total_time = 0
     all_tp, all_fp, all_tn, all_fn = 0, 0, 0, 0
     avg_rec, avg_prec = 0, 0
@@ -170,7 +173,15 @@ LATENCY_VARIATION = {17}\n""".format(GUARD_RELAYS, MIDDLE_RELAYS, EXIT_RELAYS, T
     total_type_count = [0]*6
     total_deanonymised_by_type = [0]*6
     total_tp_by_circuit_type = {'General': 0, 'C-IP': 0, 'C-RP': 0}
+
+    # circuit fingerprinting metrics
     total_deanonymised_circuit_types = {'General': 0, 'C-IP': 0, 'C-RP': 0}
+    all_c_types = ['General', 'C-IP', 'C-RP', 'HS-IP', 'HS-RP']
+    cfp_class_count = {}
+    for type1 in all_c_types:
+        cfp_class_count[type1] = {}
+        for type2 in all_c_types:
+            cfp_class_count[type1][type2] = 0
     for i in range(runs):
         total_site_wait, total_hs_wait, sites_visited, hs_visited = 0, 0, 0, 0
         relays, guards, middles, exits, \
@@ -183,11 +194,11 @@ LATENCY_VARIATION = {17}\n""".format(GUARD_RELAYS, MIDDLE_RELAYS, EXIT_RELAYS, T
         t_t_r = TIME_TO_RUN
         total_time += t_t_r
 
-        addresses_to_ips, hidden_services = generate_hidden_services(relays,
-                                                                     guards, middles,
-                                                                     exits, hs_num,
-                                                                     site_size, site_bw,
-                                                                     time)
+        addresses_to_ips, tracked_hs = generate_hidden_services(relays, guards, middles,
+                                                                exits, hs_num,
+                                                                site_size, site_bw,
+                                                                time, tracked_hs_num,
+                                                                low_guards_no=True)
 
         tracked_users = generate_users(relays, guards, middles, exits,
                                        tracked_users_num, user_bw, sites,
@@ -249,9 +260,26 @@ LATENCY_VARIATION = {17}\n""".format(GUARD_RELAYS, MIDDLE_RELAYS, EXIT_RELAYS, T
         for u in tracked_user_ids:
             tr_user_guard_traffic[u] = {}
         for g in tracked_guards:
+            for u in g.circuit_traffic:
+                # print(g.circuit_sequence[u])
+                # print(g.circuit_packet_count[u])
+                for circ in g.circuit_traffic[u]:
+                    # print(g.circuit_traffic[u][circ])
+                    circ_type = g.circuit_traffic[u][circ][0][3]
+                    c_seq = g.circuit_sequence[u][circ]
+                    c_pc = g.circuit_packet_count[u][circ]
+                    if circ_type == 'HS-RP' and c_pc[0] == c_pc[1]:
+                        print(g.circuit_traffic[u][circ])
+                    if c_pc[0] == c_pc[1]:
+                        pass
+                        # print('C-IP', circ_type, c_pc)
+                    elif c_pc[0] == 3 and c_pc[1] > 3:
+                        pass
+                        # print('HS-IP', circ_type, c_pc)
             for u in tracked_user_ids:
                 if u in g.in_traffic:
                     tracked_user_in = g.in_traffic[u]
+                    # print('{0}\n{1}\n{2}\n'.format(g.circuit_traffic[u], g.circuit_sequence[u], g.circuit_packet_count[u]))
                     for p in tracked_user_in:
                         if len(p) == 6:
                             m = p[2]
