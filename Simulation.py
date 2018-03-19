@@ -65,7 +65,7 @@ def generate_sites(sites_num, size_avg, bw_avg):
         id = 'ws{0}'.format(str(i))
         bw = abs(int(np.random.normal(bw_avg, bw_avg / 2)))
         region = get_region()
-        size = max(int(np.random.normal(size_avg, size_avg / 2)), 1) # ensure size is at least 1
+        size = max(int(np.random.normal(size_avg, size_avg / 2)), 1000) # ensure size is at least 1000
         sites.append(Website(id, bw, region, size))
     return sites
 
@@ -82,7 +82,7 @@ def generate_hidden_services(relays, guards, middles, exits, hs_num,
         pos_guards = guards
         if low_guards_no:
             pos_guards = [guards[i] for i in random.sample(range(len(guards)), 3)]
-        size = max(int(np.random.normal(size_avg, size_avg / 2)), 1) # ensure size is at least 1
+        size = max(int(np.random.normal(size_avg, size_avg / 2)), 1000) # ensure size is at least 1000
         ips = get_intro_points(relay_list, 1)
         hs = HiddenService(id, time, bw, region, size, relays, pos_guards, middles, exits, ips)
         addresses_to_ips.update(hs.ips)
@@ -259,23 +259,33 @@ LATENCY_VARIATION = {17}\n""".format(GUARD_RELAYS, MIDDLE_RELAYS, EXIT_RELAYS, T
         tracked_user_ids = [u.client.id for u in tracked_users]
         for u in tracked_user_ids:
             tr_user_guard_traffic[u] = {}
+        max_rp = 0
+        gen_or_c_rp = []
         for g in tracked_guards:
             for u in g.circuit_traffic:
                 # print(g.circuit_sequence[u])
                 # print(g.circuit_packet_count[u])
                 for circ in g.circuit_traffic[u]:
-                    # print(g.circuit_traffic[u][circ])
                     circ_type = g.circuit_traffic[u][circ][0][3]
                     c_seq = g.circuit_sequence[u][circ]
                     c_pc = g.circuit_packet_count[u][circ]
-                    if circ_type == 'HS-RP' and c_pc[0] == c_pc[1]:
-                        print(g.circuit_traffic[u][circ])
                     if c_pc[0] == c_pc[1]:
-                        pass
-                        # print('C-IP', circ_type, c_pc)
-                    elif c_pc[0] == 3 and c_pc[1] > 3:
-                        pass
-                        # print('HS-IP', circ_type, c_pc)
+                        print('C-IP', circ_type, c_pc)
+                    elif c_pc[0] > 3 and c_pc[1] == 3:
+                        print('HS-IP', circ_type, c_pc)
+                    elif c_pc[1] > c_pc[0]:
+                        if c_pc[0] + c_pc[1] > max_rp:
+                            max_rp = c_pc[0] + c_pc[1]
+                        print('HS-RP', circ_type, c_pc, max_rp)
+                    else:
+                        gen_or_c_rp.append(circ)
+                # for circ in gen_or_c_rp:
+                #     c_pc = g.circuit_packet_count[u][circ]
+                #     circ_type = g.circuit_traffic[u][circ][0][3]
+                #     if c_pc[0] + c_pc[1] >= max_rp:
+                #         print('General', circ_type, c_pc, max_rp)
+                #     else:
+                #         print('C-RP', circ_type, c_pc)
             for u in tracked_user_ids:
                 if u in g.in_traffic:
                     tracked_user_in = g.in_traffic[u]

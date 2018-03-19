@@ -57,6 +57,9 @@ class Node:
                            circuit_id, circuit_type)
             self.in_traffic[sender.id].append(packet_info)
             if not response and (not as_endpoint or not packet.to_mm):
+                packet_type = packet.content.split(' ')[0]
+                packet_info = (packet.creation_time+packet.lived, packet.original_from,
+                               circuit_id, circuit_type, packet_type)
                 self.circuit_traffic[sender.id][circuit_id].append(packet_info)
                 seq_string = '-1'
                 packet_idx = 1
@@ -124,13 +127,6 @@ class Node:
                 # Add time of arrival to out traffic
                 if response and (not to_endpoint or not packet.to_mm):
                     # print(self.id, destination.id)
-                    if packet.last_from:
-                        last_in_traffic = self.circuit_traffic[packet.last_from][circuit_id]
-                        arrival_time = last_in_traffic[-(len(packets) - i)][0]
-                        packet_traffic = (arrival_time, time_of_send, destination.id,
-                                          packet.original_from, circuit_id,
-                                          circuit_type)
-                        last_in_traffic[-(len(packets) - i)] = packet_traffic
                     seq_string = '+1'
                     packet_idx = 0
                     c_seq = self.circuit_sequence[destination.id][circuit_id]

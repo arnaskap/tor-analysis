@@ -43,8 +43,8 @@ class HiddenService(CircuitUser):
         out_content = 'RP-data {0} {1}'.format(hs_address, user_id)
         for i in range(int(math.ceil(self.size / PACKET_SIZE))-1):
             packets.append(Packet(self.id, time, content=out_content, to_mm=True))
-        out_content = 'RP-finish-data {0} {1}'.format(hs_address, user_id, to_mm=True)
-        packets.append(Packet(self.id, time, content=out_content))
+        out_content = 'RP-finish-data {0} {1}'.format(hs_address, user_id)
+        packets.append(Packet(self.id, time, content=out_content, to_mm=True))
         return packets
 
     # Function for initial setup of introduction point circuits
