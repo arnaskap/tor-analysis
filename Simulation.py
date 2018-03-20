@@ -177,11 +177,14 @@ LATENCY_VARIATION = {17}\n""".format(GUARD_RELAYS, MIDDLE_RELAYS, EXIT_RELAYS, T
 
     # cfp metrics
     all_c_types = ['General', 'C-IP', 'C-RP', 'HS-IP', 'HS-RP']
-    cfp_class_count = {}
+    all_cfp_class_count = {}
     for type1 in all_c_types:
-        cfp_class_count[type1] = {}
+        all_cfp_class_count[type1] = {}
         for type2 in all_c_types:
-            cfp_class_count[type1][type2] = 0
+            all_cfp_class_count[type1][type2] = 0
+    avg_hs_found = 0
+    avg_circuits_per_hs = 0
+    avg_sent_packets_found = 0
     for i in range(runs):
         total_site_wait, total_hs_wait, sites_visited, hs_visited = 0, 0, 0, 0
         relays, guards, middles, exits, \
@@ -262,6 +265,11 @@ LATENCY_VARIATION = {17}\n""".format(GUARD_RELAYS, MIDDLE_RELAYS, EXIT_RELAYS, T
         gen_or_c_rp = {}
         found_hs_circuits = {}
         found_sent_hs_packets = {}
+        cfp_class_count = {}
+        for type1 in all_c_types:
+            cfp_class_count[type1] = {}
+            for type2 in all_c_types:
+                cfp_class_count[type1][type2] = 0
         for hs in tracked_hs:
             found_hs_circuits[hs] = 0
             found_sent_hs_packets[hs] = 0
@@ -284,7 +292,7 @@ LATENCY_VARIATION = {17}\n""".format(GUARD_RELAYS, MIDDLE_RELAYS, EXIT_RELAYS, T
                         c_type_guess = 'HS-RP'
                     if c_type_guess:
                         cfp_class_count[circ_type][c_type_guess] += 1
-                        if u in tracked_hs and c_type_guess == 'HS_RP' and circ_type == 'HS_RP':
+                        if u in tracked_hs and c_type_guess == 'HS-RP' and circ_type == 'HS-RP':
                             found_hs_circuits[u] += 1
                             found_sent_hs_packets[u] += c_pc[1]
                     else:
@@ -319,7 +327,9 @@ LATENCY_VARIATION = {17}\n""".format(GUARD_RELAYS, MIDDLE_RELAYS, EXIT_RELAYS, T
                     else:
                         c_type_guess = 'C-RP'
                     cfp_class_count[circ_type][c_type_guess] += 1
-
+        for type1 in all_c_types:
+            for type2 in all_c_types:
+                all_cfp_class_count[type1][type2] += cfp_class_count[type1][type2]
         for exit in tracked_exits:
             if CIRCUIT_MIDDLE_NO > 1:
                 for m in exit.in_traffic:
@@ -455,17 +465,19 @@ LATENCY_VARIATION = {17}\n""".format(GUARD_RELAYS, MIDDLE_RELAYS, EXIT_RELAYS, T
         for j in range(len(type_count)):
             dt_str += 'Type {0}: {1}/{2}. '.format(j+1, deanonymised_by_type[j], type_count[j])
         dt_str += '\n'
+        cfp_count_str = 'Circuit classification count:{0}\n'.format(cfp_class_count)
         cfp_acc_str = 'Circuit classification accuracy:\n'
         for t in cfp_class_count:
             total = 0
             cc = cfp_class_count[t]
             for t2 in cc:
                 total += cc[t2]
-            cfp_acc_str += '    General: {0}%, C-RP: {1}%, C-IP: {2}%, HS-RP: {3}%, HS-IP: {4}%\n'.format(cc['General']*100/total,
-                                                                                                          cc['C-RP']*100/total,
-                                                                                                          cc['C-IP']*100/total,
-                                                                                                          cc['HS-RP']*100/total,
-                                                                                                          cc['HS-IP']*100/total)
+            cfp_acc_str += '{5} - General: {0}%, C-RP: {1}%, C-IP: {2}%, HS-RP: {3}%, HS-IP: {4}%\n'.format(cc['General']*100/total,
+                                                                                                            cc['C-RP']*100/total,
+                                                                                                            cc['C-IP']*100/total,
+                                                                                                            cc['HS-RP']*100/total,
+                                                                                                            cc['HS-IP']*100/total,
+                                                                                                            t)
         tracked_hs_found = 0
         total_packets_found = 0
         total_circuits_found = 0
@@ -476,19 +488,22 @@ LATENCY_VARIATION = {17}\n""".format(GUARD_RELAYS, MIDDLE_RELAYS, EXIT_RELAYS, T
                 tracked_hs_found += 1
         avg_circs = 0 if tracked_hs_found == 0 else total_circuits_found/tracked_hs_found
         avg_packs = 0 if tracked_hs_found == 0 else total_packets_found/tracked_hs_found
-        hs_cfp_str = 'Tracked hidden services that had at least one HS-RP circuit on owned guard relays: {0}\n'.format(tracked_hs_found)
+        hs_cfp_str = 'Tracked hidden services that had at least one HS-RP circuit on owned guard relays: {0}/{1}\n'.format(tracked_hs_found,
+                                                                                                                           len(tracked_hs))
         ac_cfp_str = 'Average circuits correctly classified per found tracked HS: {0}\n'.format(avg_circs)
-        ap_cfp_str = 'Average packets found on correctly classified tracked hidden services: {0}\n'.format(avg_packs)
+        ap_cfp_str = 'Average packets sent found on correctly classified tracked hidden services: {0}\n'.format(avg_packs)
         res_str = totp_str + cm_str + rp_str + ctp_str + du_str + cd_str +\
-                  swt_str + hswt_str + dt_str + cfp_acc_str + hs_cfp_str +\
-                  ac_cfp_str + ap_cfp_str
+                  swt_str + hswt_str + dt_str + cfp_count_str + cfp_acc_str +\
+                  hs_cfp_str + ac_cfp_str + ap_cfp_str
         print('\nRESULTS FOR RUN {0} OF {1}:'.format(i+1, runs))
-        print(cfp_class_count)
         print(res_str)
         res_file.write('\nRESULTS FOR RUN {0} OF {1}:\n'.format(i + 1, runs))
         res_file.write(res_str)
         res_file.flush()
 
+        avg_hs_found += tracked_hs_found
+        avg_circuits_per_hs += avg_circs
+        avg_sent_packets_found += avg_packs
         all_tp += tp
         all_fp += fp
         all_tn += tn
@@ -518,7 +533,26 @@ LATENCY_VARIATION = {17}\n""".format(GUARD_RELAYS, MIDDLE_RELAYS, EXIT_RELAYS, T
     for i in range(len(total_type_count)):
         tdt_str += 'Type {0}: {1}/{2}. '.format(i + 1, total_deanonymised_by_type[i], total_type_count[i])
     tdt_str += '\n'
-    res_str = totp_str + fcm_str + avgrp_str + avgdr_str + avgsw_str + avghsw_str + tcd_str + tctp_str + tdt_str
+    acfp_count_str = 'Circuit classification count:{0}\n'.format(all_cfp_class_count)
+    acfp_acc_str = 'Circuit classification accuracy:\n'
+    for t in all_cfp_class_count:
+        total = 0
+        cc = all_cfp_class_count[t]
+        for t2 in cc:
+            total += cc[t2]
+        acfp_acc_str += '{5} - General: {0}%, C-RP: {1}%, C-IP: {2}%, HS-RP: {3}%, HS-IP: {4}%\n'.format(cc['General'] * 100 / total,
+                                                                                                        cc['C-RP'] * 100 / total,
+                                                                                                        cc['C-IP'] * 100 / total,
+                                                                                                        cc['HS-RP'] * 100 / total,
+                                                                                                        cc['HS-IP'] * 100 / total,
+                                                                                                        t)
+    ahs_cfp_str = 'Tracked hidden services that had at least one HS-RP circuit on owned guard relays: {0}/{1}\n'.format(avg_hs_found/tracked_hs_num,
+                                                                                                                       tracked_hs_num)
+    aac_cfp_str = 'Average circuits correctly classified per found tracked HS: {0}\n'.format(avg_circuits_per_hs/tracked_hs_num)
+    aap_cfp_str = 'Average packets sent found on correctly classified tracked hidden services: {0}\n'.format(avg_sent_packets_found/tracked_hs_num)
+    res_str = totp_str + fcm_str + avgrp_str + avgdr_str + avgsw_str + avghsw_str + tcd_str +\
+              tctp_str + tdt_str + acfp_count_str + acfp_acc_str + ahs_cfp_str + aac_cfp_str +\
+              aap_cfp_str
     print('\nTOTAL RESULTS:')
     print(res_str)
     res_file.write('\nTOTAL RESULTS:\n')
