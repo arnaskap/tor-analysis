@@ -296,6 +296,7 @@ LATENCY_VARIATION = {17}\n""".format(GUARD_RELAYS, MIDDLE_RELAYS, EXIT_RELAYS, T
                             found_hs_circuits[u] += 1
                             found_sent_hs_packets[u] += c_pc[1]
                     else:
+                        print(c_seq, circ_type)
                         gen_or_c_rp[g][u].append(circ)
             for u in tracked_user_ids:
                 if u in g.in_traffic:
@@ -322,10 +323,10 @@ LATENCY_VARIATION = {17}\n""".format(GUARD_RELAYS, MIDDLE_RELAYS, EXIT_RELAYS, T
                     c_seq = g.circuit_sequence[u][circ]
                     c_pc = g.circuit_packet_count[u][circ]
                     c_type_guess = None
-                    if c_pc[0] + c_pc[1] > max_rp:
-                        c_type_guess = 'General'
-                    else:
+                    if c_pc[0] + c_pc[1] <= max_rp and c_seq.startswith('-1+1-1+1-1+1-1+1-1'):
                         c_type_guess = 'C-RP'
+                    else:
+                        c_type_guess = 'General'
                     cfp_class_count[circ_type][c_type_guess] += 1
         for type1 in all_c_types:
             for type2 in all_c_types:
