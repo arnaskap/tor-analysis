@@ -284,7 +284,7 @@ TRACKED_HIDDEN_SERVICES = {18}\n""".format(GUARD_RELAYS, MIDDLE_RELAYS, EXIT_REL
                     c_seq = g.circuit_sequence[u][circ]
                     c_pc = g.circuit_packet_count[u][circ]
                     c_type_guess = None
-                    if c_pc[0] == c_pc[1]:
+                    if c_pc[0] == c_pc[1] and c_pc[0] < 6:
                         c_type_guess = 'C-IP'
                     elif c_pc[0] > 3 and c_pc[1] == 3:
                         c_type_guess = 'HS-IP'
