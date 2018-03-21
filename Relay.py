@@ -70,10 +70,13 @@ class Relay(Node):
             packet = Packet(self.id, curtime, content=out_content)
             self.data_packets.append(packet)
 
-        elif packet_type == 'RP-finish-data':
+        elif packet_type.startswith('RP-finish'):
             hs_address = in_content[1]
             user_id = in_content[2]
-            out_content = 'RP-data {0} {1}'.format(hs_address, user_id)
+            if packet_type == 'RP-finish-data':
+                out_content = 'RP-data {0} {1}'.format(hs_address, user_id)
+            else:
+                out_content = 'RP-finish-last {0} {1}'.format(hs_address, user_id)
             packet = Packet(self.id, curtime, content=out_content)
             self.data_packets.append(packet)
             c_rp_circuit = self.c_rp_circuits[(user_id, hs_address)]

@@ -93,7 +93,7 @@ class Client(CircuitUser):
     def _process_packet(self, sender, packet, circuit=None):
         in_content = packet.content.split(' ')
         packet_type = in_content[0]
-        if self.req_sent_at and ('data' in packet_type or 'DATA' in packet_type):
+        if self.req_sent_at and ('finish' in packet_type or 'DATA' in packet_type):
             if packet_type == 'DATA':
                 self.site_wait_time += packet.creation_time + packet.lived - self.req_sent_at
                 self.sites_visited += 1

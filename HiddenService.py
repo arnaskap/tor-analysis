@@ -38,12 +38,17 @@ class HiddenService(CircuitUser):
         return address
 
     # Divide website requested content into packet stream
-    def _get_site_packet_stream(self, hs_address, user_id, time):
+    def _get_site_packet_stream(self, hs_address, user_id, time, split_size=None, final=True):
+        if split_size is None:
+            split_size = int(math.ceil(self.size / PACKET_SIZE))-1
         packets = []
         out_content = 'RP-data {0} {1}'.format(hs_address, user_id)
-        for i in range(int(math.ceil(self.size / PACKET_SIZE))-1):
+        for i in range(split_size-1):
             packets.append(Packet(self.id, time, content=out_content, to_mm=True))
-        out_content = 'RP-finish-data {0} {1}'.format(hs_address, user_id)
+        if not final:
+            out_content = 'RP-finish-data {0} {1}'.format(hs_address, user_id)
+        else:
+            out_content = 'RP-finish-last {0} {1}'.format(hs_address, user_id)
         packets.append(Packet(self.id, time, content=out_content, to_mm=True))
         return packets
 
@@ -66,10 +71,22 @@ class HiddenService(CircuitUser):
 
     # Send website packets back through a circuit
     def _send_website(self, hs_address, user_id, time):
-        packets = self._get_site_packet_stream(hs_address, user_id, time)
         hs_rp_circuit = self.hs_rp_circuits[(hs_address, user_id)]
         rp = self.user_rp[user_id]
-        hs_rp_circuit.send_packets(packets, rp)
+        if MAX_SPLIT:
+            curtime = time
+            packets_left = int(math.ceil(self.size / PACKET_SIZE))-1
+            while packets_left > 0:
+                split_size = min(packets_left, random.randint(1, MAX_SPLIT))
+                final = False if split_size < packets_left else True
+                packets = self._get_site_packet_stream(hs_address, user_id, curtime,
+                                                       split_size=split_size, final=final)
+                hs_rp_circuit.send_packets(packets, rp)
+                packets_left -= split_size
+                curtime += max(random.uniform(0, HS_DELAY_CAP), packets[-1].lived)
+        else:
+            packets = self._get_site_packet_stream(hs_address, user_id, time)
+            hs_rp_circuit.send_packets(packets, rp)
 
     def _process_packet(self, sender, packet, circuit=None):
         curtime = packet.creation_time + packet.lived

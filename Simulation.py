@@ -136,10 +136,12 @@ TOTAL_RUNS = {13}
 TIME_TO_RUN = {14}
 PREDICTED_SEND_TIME = {15}
 ERROR = {16}
-LATENCY_VARIATION = {17}\n""".format(GUARD_RELAYS, MIDDLE_RELAYS, EXIT_RELAYS, TRACKED_GUARD_RELAYS,
-                               TRACKED_EXIT_RELAYS, CLEARNET_SITES, HIDDEN_SERVICES, TRACKED_USERS,
-                               USERS_NUM, RELAY_BW_AVG, SITE_BW_AVG, USER_BW_AVG, SITE_SIZE_AVG,
-                               TOTAL_RUNS, TIME_TO_RUN, PREDICTED_SEND_TIME, ERROR, LATENCY_VARIATION)
+LATENCY_VARIATION = {17}
+TRACKED_HIDDEN_SERVICES = {18}\n""".format(GUARD_RELAYS, MIDDLE_RELAYS, EXIT_RELAYS, TRACKED_GUARD_RELAYS,
+                                           TRACKED_EXIT_RELAYS, CLEARNET_SITES, HIDDEN_SERVICES, TRACKED_USERS,
+                                           USERS_NUM, RELAY_BW_AVG, SITE_BW_AVG, USER_BW_AVG, SITE_SIZE_AVG,
+                                           TOTAL_RUNS, TIME_TO_RUN, PREDICTED_SEND_TIME, ERROR, LATENCY_VARIATION,
+                                           TRACKED_HIDDEN_SERVICES)
 
     print(env_string)
     res_file.write(env_string)
@@ -296,7 +298,6 @@ LATENCY_VARIATION = {17}\n""".format(GUARD_RELAYS, MIDDLE_RELAYS, EXIT_RELAYS, T
                             found_hs_circuits[u] += 1
                             found_sent_hs_packets[u] += c_pc[1]
                     else:
-                        print(c_seq, circ_type)
                         gen_or_c_rp[g][u].append(circ)
             for u in tracked_user_ids:
                 if u in g.in_traffic:

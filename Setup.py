@@ -15,9 +15,9 @@ SITE_BW_AVG = 5000000
 USER_BW_AVG = 3000000
 RELAY_BW_AVG = 15000000
 
-USERS_NUM = 5000
+USERS_NUM = 500
 
-TIME_TO_RUN = 2400
+TIME_TO_RUN = 600
 TOTAL_RUNS = 10
 CIRCUIT_TIME = 600
 
@@ -25,16 +25,21 @@ TRACKED_GUARD_RELAYS = 3
 TRACKED_EXIT_RELAYS = 3
 
 TRACKED_HIDDEN_SERVICES = 10
-TRACKED_USERS = 40
+TRACKED_USERS = 30
 
 PREDICTED_SEND_TIME = 0.0016
 ERROR = 0.03
 
 LATENCY_VARIATION = 0.015
 
-# Correlation attack defense measures
+# Correlation attack defence measures
 CIRCUIT_MIDDLE_NO = 1
 DELAY_CAP = 0
+
+# Circuit fingerprinting attack defence measures
+C_HS_EQUAL_PACKETS = False
+MAX_SPLIT = 3 # set to 0 for no sub-stream splits
+HS_DELAY_CAP = 1
 
 regions = ['Asia', 'Australia', 'Europe', 'North America', 'South America']
 
