@@ -83,6 +83,14 @@ class Relay(Node):
             c_rp_circuit.send_packets_to_startpoint(self.data_packets, self)
             self.data_packets = []
 
+        elif packet_type == 'RP-dummy':
+            hs_address = in_content[1]
+            user_id = in_content[2]
+            hs_rp_circuit = self.hs_rp_circuits[(user_id, hs_address)]
+            out_content = 'RP-dummy {0} {1}'.format(hs_address, user_id)
+            packet = Packet(self.id, curtime, content=out_content)
+            hs_rp_circuit.send_packets_to_startpoint([packet], self)
+
     # # function used to emulate functionality of a relay in a
     # # circuit, receiving a packet and sending it
     # def receive_and_send(self):

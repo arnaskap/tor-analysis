@@ -288,7 +288,7 @@ TRACKED_HIDDEN_SERVICES = {18}\n""".format(GUARD_RELAYS, MIDDLE_RELAYS, EXIT_REL
                         c_type_guess = 'C-IP'
                     elif c_pc[0] > 3 and c_pc[1] == 3:
                         c_type_guess = 'HS-IP'
-                    elif c_pc[1] > c_pc[0]:
+                    elif c_pc[1] / c_pc[0] > 1.05:
                         if c_pc[0] + c_pc[1] > max_rp:
                             max_rp = c_pc[0] + c_pc[1]
                         c_type_guess = 'HS-RP'

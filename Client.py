@@ -24,6 +24,9 @@ class Client(CircuitUser):
         # Can have one active Client - Rendezvous Point circuit for
         # every different hidden service being visited
         self.c_rp_circuits = {}
+        # Counts balance of sent and incoming packets on this circuit,
+        # used for circuit fingerprinting defence measure
+        self.c_rp_circuit_packets = {}
 
         # Hidden service address to introduction point map
         self.ips = ips
@@ -40,6 +43,7 @@ class Client(CircuitUser):
         self.sites_visited = 0
         self.hs_wait_time = 0
         self.hs_visited = 0
+        self.content_packets = 1
 
     # Get a random relay as the rendezvous point to be used
     def _get_new_rp(self):
@@ -89,6 +93,8 @@ class Client(CircuitUser):
         self.rps[hs_address] = rp
         self._establish_c_ip_circuit(hs_address)
         self._send_to_ip(hs_address, rp.id)
+        c_rp_circuit = self.c_rp_circuits[hs_address]
+        self.c_rp_circuit_packets[c_rp_circuit] = 0
 
     def _process_packet(self, sender, packet, circuit=None):
         in_content = packet.content.split(' ')
@@ -98,12 +104,29 @@ class Client(CircuitUser):
                 self.site_wait_time += packet.creation_time + packet.lived - self.req_sent_at
                 self.sites_visited += 1
             else:
+                self.content_packets += 1
                 self.hs_wait_time += packet.creation_time + packet.lived - self.req_sent_at
                 self.hs_visited += 1
             self.req_sent_at = None
+        if packet_type == 'RP-data':
+            self.content_packets += 1
         if packet_type.startswith('RP-confirm') or \
            packet_type.startswith('RP-data'):
             self.time = packet.creation_time + packet.lived
+
+    def _send_dummy_stream(self, hs_address):
+        user_id = self.hs_user_ids[hs_address]
+        circuit = self.c_rp_circuits[hs_address]
+        rp = self.rps[hs_address]
+        stream_size = self.c_rp_circuit_packets[circuit]
+        packets = []
+        for i in range(stream_size):
+            out_content = 'RP-dummy {0} {1}'.format(hs_address, user_id)
+            packets.append(Packet(self.id, self.time, content=out_content))
+        circuit.send_packets(packets, rp)
+        # self.time += packets[-1].lived + packets[-1].creation_time
+        self.c_rp_circuit_packets[circuit] = 0
+
 
     # Emulates packet sending for visiting a specified clearnet website
     def visit_clearnet_site(self, site):
@@ -135,3 +158,7 @@ class Client(CircuitUser):
         out_content = 'RP-GET {0} {1}'.format(hs_address, user_id)
         packet = Packet(self.id, self.time, content=out_content, to_mm=True)
         c_rp_circuit.send_packets([packet], rp)
+        self.c_rp_circuit_packets[c_rp_circuit] = self.content_packets - 1
+        self.content_packets = 0
+        if C_HS_EQUAL_PACKETS and self.c_rp_circuit_packets[c_rp_circuit] > 0:
+            self._send_dummy_stream(hs_address)

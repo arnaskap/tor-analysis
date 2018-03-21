@@ -3,9 +3,9 @@
 import numpy as np
 import random
 
-GUARD_RELAYS = 30
+GUARD_RELAYS = 20
 MIDDLE_RELAYS = 40
-EXIT_RELAYS = 20
+EXIT_RELAYS = 30
 
 CLEARNET_SITES = 400
 HIDDEN_SERVICES = 80
@@ -15,9 +15,9 @@ SITE_BW_AVG = 5000000
 USER_BW_AVG = 3000000
 RELAY_BW_AVG = 15000000
 
-USERS_NUM = 500
+USERS_NUM = 3000
 
-TIME_TO_RUN = 600
+TIME_TO_RUN = 2400
 TOTAL_RUNS = 10
 CIRCUIT_TIME = 600
 
@@ -25,7 +25,7 @@ TRACKED_GUARD_RELAYS = 3
 TRACKED_EXIT_RELAYS = 3
 
 TRACKED_HIDDEN_SERVICES = 10
-TRACKED_USERS = 30
+TRACKED_USERS = 40
 
 PREDICTED_SEND_TIME = 0.0016
 ERROR = 0.03
@@ -37,8 +37,8 @@ CIRCUIT_MIDDLE_NO = 1
 DELAY_CAP = 0
 
 # Circuit fingerprinting attack defence measures
-C_HS_EQUAL_PACKETS = False
-MAX_SPLIT = 3 # set to 0 for no sub-stream splits
+C_HS_EQUAL_PACKETS = True
+MAX_SPLIT = 5 # set to 0 for no sub-stream splits
 HS_DELAY_CAP = 1
 
 regions = ['Asia', 'Australia', 'Europe', 'North America', 'South America']
