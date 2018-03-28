@@ -37,9 +37,9 @@ CIRCUIT_MIDDLE_NO = 1
 DELAY_CAP = 0
 
 # Circuit fingerprinting attack defence measures
-C_HS_EQUAL_PACKETS = True
-MAX_SPLIT = 5 # set to 0 for no sub-stream splits
-HS_DELAY_CAP = 1
+C_HS_EQUAL_PACKETS = False
+MAX_SPLIT = 0 # set to 0 for no sub-stream splits
+HS_DELAY_CAP = 0
 
 regions = ['Asia', 'Australia', 'Europe', 'North America', 'South America']
 

@@ -7,12 +7,19 @@ PACKET_SIZE=586
 
 
 # Possible packet types:
+# INIT
+# INITED
 # Data
 # IP
-# RP-C
+# IP-confirm
 # RP-confirm
+# RP-GET
 # RP-data
-# fill in later
+# RP-finish-data
+# RP-finish-last
+# RP-C
+# RP-HS
+# RP-dummy
 
 class Packet:
 

@@ -1,6 +1,7 @@
 # Main simulation class for test setup, generation and analysis
 
 import datetime
+import os
 
 from Setup import *
 from Relay import *
@@ -115,6 +116,8 @@ def generate_users(relays, guards, middles, exits, users_num, bw_avg,
 
 
 if __name__ == '__main__':
+    if not os.path.exists('results'):
+        os.makedirs('results')
     now = datetime.datetime.now()
     filename = 'results/{0}.res'.format(now)
     res_file = open(filename, 'w')
